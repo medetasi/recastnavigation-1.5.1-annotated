@@ -762,10 +762,10 @@ dtStatus dtBuildTileCacheContours(dtTileCacheAlloc* alloc,
 	memset(lcset.conts, 0, sizeof(dtTileCacheContour)*lcset.nconts);
 	
 	// Allocate temp buffer for contour tracing.
-	const int maxTempVerts = (w+h)*2 * 2; // Twice around the layer.
-	
-	dtFixedArray<unsigned char> tempVerts(alloc, maxTempVerts*4);
-	if (!tempVerts)
+	const int maxTempVerts = (w + h) * 2 * 2; // Twice around the layer.
+
+	dtFixedArray<unsigned char> tempVerts(alloc, maxTempVerts * 4);
+	if (!tempVerts) // 如果 tileSize 太大，这里会报错
 		return DT_FAILURE | DT_OUT_OF_MEMORY;
 	
 	dtFixedArray<unsigned short> tempPoly(alloc, maxTempVerts);

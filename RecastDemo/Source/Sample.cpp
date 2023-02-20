@@ -175,7 +175,7 @@ void Sample::collectSettings(BuildSettings& settings)
 	settings.partitionType = m_partitionType;
 }
 
-
+// 重置参数，通用参数都是同一份数据，与类型和地图文件无关
 void Sample::resetCommonSettings()
 {
 	m_cellSize = 0.3f;
@@ -194,6 +194,7 @@ void Sample::resetCommonSettings()
 	m_partitionType = SAMPLE_PARTITION_WATERSHED;
 }
 
+// 创建 gui 配置选项
 void Sample::handleCommonSettings()
 {
 	imguiLabel("Rasterization");

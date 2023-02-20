@@ -33,6 +33,8 @@ static const dtNodeIndex DT_NULL_IDX = (dtNodeIndex)~0;
 
 static const int DT_NODE_PARENT_BITS = 24;
 static const int DT_NODE_STATE_BITS = 2;
+
+// 单个寻路点的结构，保存着 A* 所需的一些数据
 struct dtNode
 {
 	float pos[3];								///< Position of the node.
@@ -46,6 +48,7 @@ struct dtNode
 
 static const int DT_MAX_STATES_PER_NODE = 1 << DT_NODE_STATE_BITS;	// number of extra states per node. See dtNode::state
 
+// 寻路点池
 class dtNodePool
 {
 public:
@@ -97,7 +100,7 @@ private:
 	dtNodePool(const dtNodePool&);
 	dtNodePool& operator=(const dtNodePool&);
 	
-	dtNode* m_nodes;
+	dtNode* m_nodes; // 所有 node 的集合
 	dtNodeIndex* m_first;
 	dtNodeIndex* m_next;
 	const int m_maxNodes;

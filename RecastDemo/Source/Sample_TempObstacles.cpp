@@ -166,7 +166,7 @@ struct LinearAllocator : public dtTileCacheAlloc
 	{
 		if (!buffer)
 			return 0;
-		if (top+size > capacity)
+		if (top + size > capacity)
 			return 0;
 		unsigned char* mem = &buffer[top];
 		top += size;
@@ -285,11 +285,9 @@ struct RasterizationContext
 	int ntiles;
 };
 
-int Sample_TempObstacles::rasterizeTileLayers(
-							   const int tx, const int ty,
-							   const rcConfig& cfg,
-							   TileCacheData* tiles,
-							   const int maxTiles)
+// 处理每一层 tile 的数据
+// 保存在 tiles 里，最多 maxTiles 层，默认是 30
+int Sample_TempObstacles::rasterizeTileLayers(const int tx, const int ty, const rcConfig& cfg, TileCacheData* tiles, const int maxTiles)
 {
 	if (!m_geom || !m_geom->getMesh() || !m_geom->getChunkyMesh())
 	{
@@ -310,18 +308,19 @@ int Sample_TempObstacles::rasterizeTileLayers(
 	rcConfig tcfg;
 	memcpy(&tcfg, &cfg, sizeof(tcfg));
 
-	tcfg.bmin[0] = cfg.bmin[0] + tx*tcs;
+	tcfg.bmin[0] = cfg.bmin[0] + tx * tcs;
 	tcfg.bmin[1] = cfg.bmin[1];
-	tcfg.bmin[2] = cfg.bmin[2] + ty*tcs;
-	tcfg.bmax[0] = cfg.bmin[0] + (tx+1)*tcs;
+	tcfg.bmin[2] = cfg.bmin[2] + ty * tcs;
+	tcfg.bmax[0] = cfg.bmin[0] + (tx + 1) * tcs;
 	tcfg.bmax[1] = cfg.bmax[1];
-	tcfg.bmax[2] = cfg.bmin[2] + (ty+1)*tcs;
-	tcfg.bmin[0] -= tcfg.borderSize*tcfg.cs;
-	tcfg.bmin[2] -= tcfg.borderSize*tcfg.cs;
-	tcfg.bmax[0] += tcfg.borderSize*tcfg.cs;
-	tcfg.bmax[2] += tcfg.borderSize*tcfg.cs;
+	tcfg.bmax[2] = cfg.bmin[2] + (ty + 1) * tcs;
+	tcfg.bmin[0] -= tcfg.borderSize * tcfg.cs;
+	tcfg.bmin[2] -= tcfg.borderSize * tcfg.cs;
+	tcfg.bmax[0] += tcfg.borderSize * tcfg.cs;
+	tcfg.bmax[2] += tcfg.borderSize * tcfg.cs;
 	
 	// Allocate voxel heightfield where we rasterize our input data to.
+	// 计算高度场
 	rc.solid = rcAllocHeightfield();
 	if (!rc.solid)
 	{
@@ -363,8 +362,7 @@ int Sample_TempObstacles::rasterizeTileLayers(
 		const int ntris = node.n;
 		
 		memset(rc.triareas, 0, ntris*sizeof(unsigned char));
-		rcMarkWalkableTriangles(m_ctx, tcfg.walkableSlopeAngle,
-								verts, nverts, tris, ntris, rc.triareas);
+		rcMarkWalkableTriangles(m_ctx, tcfg.walkableSlopeAngle, verts, nverts, tris, ntris, rc.triareas);
 		
 		if (!rcRasterizeTriangles(m_ctx, verts, nverts, tris, rc.triareas, ntris, *rc.solid, tcfg.walkableClimb))
 			return 0;
@@ -458,15 +456,16 @@ int Sample_TempObstacles::rasterizeTileLayers(
 	}
 
 	// Transfer ownsership of tile data from build context to the caller.
+	// 计算最终层数，
 	int n = 0;
 	for (int i = 0; i < rcMin(rc.ntiles, maxTiles); ++i)
 	{
-		tiles[n++] = rc.tiles[i];
+		tiles[n++] = rc.tiles[i]; // 将数据存入参数 tiles 中
 		rc.tiles[i].data = 0;
 		rc.tiles[i].dataSize = 0;
 	}
 	
-	return n;
+	return n; // 返回最终的层数
 }
 
 
@@ -777,6 +776,7 @@ TempObstacleHilightTool::~TempObstacleHilightTool()
 	// Defined out of line to fix the weak v-tables warning
 }
 
+// ob 创建工具类
 class TempObstacleCreateTool : public SampleTool
 {
 	Sample_TempObstacles* m_sample;
@@ -847,13 +847,13 @@ Sample_TempObstacles::Sample_TempObstacles() :
 	m_maxPolysPerTile(0),
 	m_tileSize(48)
 {
-	resetCommonSettings();
+	resetCommonSettings(); // 重置通用参数
 	
-	m_talloc = new LinearAllocator(32000);
+	m_talloc = new LinearAllocator(320000); // m_talloc 的 capacity 写死是 32000，可能会导致 tileSize 太大的时候 ob build 失败
 	m_tcomp = new FastLZCompressor;
 	m_tmproc = new MeshProcess;
 	
-	setTool(new TempObstacleCreateTool);
+	setTool(new TempObstacleCreateTool); // 将左边的工具栏设为 ob 的 tool 工具栏
 }
 
 Sample_TempObstacles::~Sample_TempObstacles()
@@ -863,34 +863,37 @@ Sample_TempObstacles::~Sample_TempObstacles()
 	dtFreeTileCache(m_tileCache);
 }
 
+// 处理 ob 的设置
 void Sample_TempObstacles::handleSettings()
 {
-	Sample::handleCommonSettings();
+	Sample::handleCommonSettings(); // 处理通用参数
 
+	// 保存中间结果选项
 	if (imguiCheck("Keep Itermediate Results", m_keepInterResults))
 		m_keepInterResults = !m_keepInterResults;
 
 	imguiLabel("Tiling");
-	imguiSlider("TileSize", &m_tileSize, 16.0f, 128.0f, 8.0f);
+	imguiSlider("TileSize", &m_tileSize, 16.0f, 128.0f, 8.0f); // 这个调节范围居然是写死的，16 - 128，每次移动 8 个数值
 	
 	int gridSize = 1;
 	if (m_geom)
 	{
-		const float* bmin = m_geom->getNavMeshBoundsMin();
-		const float* bmax = m_geom->getNavMeshBoundsMax();
+		const float* bmin = m_geom->getNavMeshBoundsMin(); // mesh 左下点
+		const float* bmax = m_geom->getNavMeshBoundsMax(); // mesh 右上点
 		char text[64];
 		int gw = 0, gh = 0;
-		rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
+		rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh); // 计算以 cellSize 为单位的长和宽
 		const int ts = (int)m_tileSize;
-		const int tw = (gw + ts-1) / ts;
-		const int th = (gh + ts-1) / ts;
+		const int tw = (gw + ts-1) / ts; // 计算以 tileSize 为单位的宽
+		const int th = (gh + ts-1) / ts; // 计算以 tileSize 为单位的长
 		snprintf(text, 64, "Tiles  %d x %d", tw, th);
 		imguiValue(text);
 
 		// Max tiles and max polys affect how the tile IDs are caculated.
 		// There are 22 bits available for identifying a tile and a polygon.
-		int tileBits = rcMin((int)dtIlog2(dtNextPow2(tw*th*EXPECTED_LAYERS_PER_TILE)), 14);
-		if (tileBits > 14) tileBits = 14;
+		int tileBits = rcMin((int)dtIlog2(dtNextPow2(tw * th * EXPECTED_LAYERS_PER_TILE)), 14);
+		if (tileBits > 14)
+			tileBits = 14;
 		int polyBits = 22 - tileBits;
 		m_maxTiles = 1 << tileBits;
 		m_maxPolysPerTile = 1 << polyBits;
@@ -898,7 +901,7 @@ void Sample_TempObstacles::handleSettings()
 		imguiValue(text);
 		snprintf(text, 64, "Max Polys  %d", m_maxPolysPerTile);
 		imguiValue(text);
-		gridSize = tw*th;
+		gridSize = tw * th;
 	}
 	else
 	{
@@ -1202,6 +1205,7 @@ void Sample_TempObstacles::clearAllTempObstacles()
 	}
 }
 
+// ob 的 build 过程
 bool Sample_TempObstacles::handleBuild()
 {
 	dtStatus status;
@@ -1258,7 +1262,7 @@ bool Sample_TempObstacles::handleBuild()
 	tcparams.walkableRadius = m_agentRadius;
 	tcparams.walkableClimb = m_agentMaxClimb;
 	tcparams.maxSimplificationError = m_edgeMaxError;
-	tcparams.maxTiles = tw*th*EXPECTED_LAYERS_PER_TILE;
+	tcparams.maxTiles = tw * th * EXPECTED_LAYERS_PER_TILE;
 	tcparams.maxObstacles = 128;
 
 	dtFreeTileCache(m_tileCache);
@@ -1269,7 +1273,7 @@ bool Sample_TempObstacles::handleBuild()
 		m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate tile cache.");
 		return false;
 	}
-	status = m_tileCache->init(&tcparams, m_talloc, m_tcomp, m_tmproc);
+	status = m_tileCache->init(&tcparams, m_talloc, m_tcomp, m_tmproc); // 这里传入了 talloc，其中的参数 capacity 默认为 32000
 	if (dtStatusFailed(status))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init tile cache.");
@@ -1288,8 +1292,8 @@ bool Sample_TempObstacles::handleBuild()
 	dtNavMeshParams params;
 	memset(&params, 0, sizeof(params));
 	rcVcopy(params.orig, bmin);
-	params.tileWidth = m_tileSize*m_cellSize;
-	params.tileHeight = m_tileSize*m_cellSize;
+	params.tileWidth = m_tileSize * m_cellSize;
+	params.tileHeight = m_tileSize * m_cellSize;
 	params.maxTiles = m_maxTiles;
 	params.maxPolys = m_maxPolysPerTile;
 	
@@ -1315,18 +1319,19 @@ bool Sample_TempObstacles::handleBuild()
 	m_cacheLayerCount = 0;
 	m_cacheCompressedSize = 0;
 	m_cacheRawSize = 0;
-	
+
 	for (int y = 0; y < th; ++y)
 	{
 		for (int x = 0; x < tw; ++x)
 		{
-			TileCacheData tiles[MAX_LAYERS];
+			TileCacheData tiles[MAX_LAYERS]; // 定义一个可以保存最大层级的 tile 数组
 			memset(tiles, 0, sizeof(tiles));
-			int ntiles = rasterizeTileLayers(x, y, cfg, tiles, MAX_LAYERS);
+			int ntiles = rasterizeTileLayers(x, y, cfg, tiles, MAX_LAYERS); // 处理位于 x/y 上每一个层级的 tile，汇总到 tiles 中
 
 			for (int i = 0; i < ntiles; ++i)
 			{
 				TileCacheData* tile = &tiles[i];
+				// 将所有 tile 加入到 tileCache 中，相同位置不同层级的在同一个哈希链上
 				status = m_tileCache->addTile(tile->data, tile->dataSize, DT_COMPRESSEDTILE_FREE_DATA, 0);
 				if (dtStatusFailed(status))
 				{
@@ -1344,9 +1349,18 @@ bool Sample_TempObstacles::handleBuild()
 
 	// Build initial meshes
 	m_ctx->startTimer(RC_TIMER_TOTAL);
+	int faild_count = 0;
 	for (int y = 0; y < th; ++y)
+	{
 		for (int x = 0; x < tw; ++x)
-			m_tileCache->buildNavMeshTilesAt(x,y, m_navMesh);
+		{
+			auto status = m_tileCache->buildNavMeshTilesAt(x, y, m_navMesh); // 为 x/y 上的所有 tile 生成 navmesh
+			if (dtStatusFailed(status))
+			{
+				faild_count++;
+			}
+		}
+	}
 	m_ctx->stopTimer(RC_TIMER_TOTAL);
 	
 	m_cacheBuildTimeMs = m_ctx->getAccumulatedTime(RC_TIMER_TOTAL)/1000.0f;
@@ -1355,13 +1369,14 @@ bool Sample_TempObstacles::handleBuild()
 
 	const dtNavMesh* nav = m_navMesh;
 	int navmeshMemUsage = 0;
+	// 遍历所有 tile 计算内存占用总量
 	for (int i = 0; i < nav->getMaxTiles(); ++i)
 	{
 		const dtMeshTile* tile = nav->getTile(i);
 		if (tile->header)
 			navmeshMemUsage += tile->dataSize;
 	}
-	printf("navmeshMemUsage = %.1f kB", navmeshMemUsage/1024.0f);
+	printf("navmeshMemUsage = %.1f kB", navmeshMemUsage / 1024.0f);
 		
 	
 	if (m_tool)
@@ -1399,9 +1414,9 @@ static const int TILECACHESET_VERSION = 1;
 
 struct TileCacheSetHeader
 {
-	int magic;
-	int version;
-	int numTiles;
+	int magic; // 保存魔数
+	int version; // 保存版本号
+	int numTiles; // 保存 tile 数量
 	dtNavMeshParams meshParams;
 	dtTileCacheParams cacheParams;
 };
@@ -1412,91 +1427,97 @@ struct TileCacheTileHeader
 	int dataSize;
 };
 
+// 保存所有的 tile cache
 void Sample_TempObstacles::saveAll(const char* path)
 {
-	if (!m_tileCache) return;
+	if (!m_tileCache)
+		return;
 	
 	FILE* fp = fopen(path, "wb");
 	if (!fp)
 		return;
 	
 	// Store header.
+	// 文件头
 	TileCacheSetHeader header;
-	header.magic = TILECACHESET_MAGIC;
-	header.version = TILECACHESET_VERSION;
-	header.numTiles = 0;
+	header.magic = TILECACHESET_MAGIC; // 保存一个魔数
+	header.version = TILECACHESET_VERSION; // 保存一个版本号
+	header.numTiles = 0; // tile 的数量
 	for (int i = 0; i < m_tileCache->getTileCount(); ++i)
 	{
 		const dtCompressedTile* tile = m_tileCache->getTile(i);
 		if (!tile || !tile->header || !tile->dataSize) continue;
 		header.numTiles++;
 	}
-	memcpy(&header.cacheParams, m_tileCache->getParams(), sizeof(dtTileCacheParams));
-	memcpy(&header.meshParams, m_navMesh->getParams(), sizeof(dtNavMeshParams));
+	memcpy(&header.cacheParams, m_tileCache->getParams(), sizeof(dtTileCacheParams)); // 保存 build 的配置参数
+	memcpy(&header.meshParams, m_navMesh->getParams(), sizeof(dtNavMeshParams)); // 保存导航网格的配置参数
 	fwrite(&header, sizeof(TileCacheSetHeader), 1, fp);
 
 	// Store tiles.
 	for (int i = 0; i < m_tileCache->getTileCount(); ++i)
 	{
-		const dtCompressedTile* tile = m_tileCache->getTile(i);
-		if (!tile || !tile->header || !tile->dataSize) continue;
+		const dtCompressedTile* tile = m_tileCache->getTile(i); // 拿到 tile
+		if (!tile || !tile->header || !tile->dataSize)
+			continue;
 
-		TileCacheTileHeader tileHeader;
+		TileCacheTileHeader tileHeader; // tile 的结构头
 		tileHeader.tileRef = m_tileCache->getTileRef(tile);
 		tileHeader.dataSize = tile->dataSize;
-		fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
+		fwrite(&tileHeader, sizeof(tileHeader), 1, fp); // 将 tile 的头部信息写入到 file 中
 
-		fwrite(tile->data, tile->dataSize, 1, fp);
+		fwrite(tile->data, tile->dataSize, 1, fp); // 将 tile 的数据写入到 file 中
 	}
 
 	fclose(fp);
 }
 
+// 加载导出的文件
 void Sample_TempObstacles::loadAll(const char* path)
 {
 	FILE* fp = fopen(path, "rb");
-	if (!fp) return;
+	if (!fp)
+		return;
 	
 	// Read header.
 	TileCacheSetHeader header;
-	size_t headerReadReturnCode = fread(&header, sizeof(TileCacheSetHeader), 1, fp);
+	size_t headerReadReturnCode = fread(&header, sizeof(TileCacheSetHeader), 1, fp); // 读取文件头
 	if( headerReadReturnCode != 1)
 	{
 		// Error or early EOF
 		fclose(fp);
 		return;
 	}
-	if (header.magic != TILECACHESET_MAGIC)
+	if (header.magic != TILECACHESET_MAGIC) // 验证魔数
 	{
 		fclose(fp);
 		return;
 	}
-	if (header.version != TILECACHESET_VERSION)
+	if (header.version != TILECACHESET_VERSION) // 验证版本
 	{
 		fclose(fp);
 		return;
 	}
 	
-	m_navMesh = dtAllocNavMesh();
+	m_navMesh = dtAllocNavMesh(); // 分配内存
 	if (!m_navMesh)
 	{
 		fclose(fp);
 		return;
 	}
-	dtStatus status = m_navMesh->init(&header.meshParams);
+	dtStatus status = m_navMesh->init(&header.meshParams); // 使用文件头的参数初始化 navmesh
 	if (dtStatusFailed(status))
 	{
 		fclose(fp);
 		return;
 	}
 
-	m_tileCache = dtAllocTileCache();
+	m_tileCache = dtAllocTileCache(); // 分配内存
 	if (!m_tileCache)
 	{
 		fclose(fp);
 		return;
 	}
-	status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc);
+	status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc); // 使用文件头的参数初始化 tileCache
 	if (dtStatusFailed(status))
 	{
 		fclose(fp);
@@ -1504,10 +1525,11 @@ void Sample_TempObstacles::loadAll(const char* path)
 	}
 		
 	// Read tiles.
+	// 从文件中读取全部 tile 的数据
 	for (int i = 0; i < header.numTiles; ++i)
 	{
 		TileCacheTileHeader tileHeader;
-		size_t tileHeaderReadReturnCode = fread(&tileHeader, sizeof(tileHeader), 1, fp);
+		size_t tileHeaderReadReturnCode = fread(&tileHeader, sizeof(tileHeader), 1, fp); // 读取 tile 头部数据
 		if( tileHeaderReadReturnCode != 1)
 		{
 			// Error or early EOF
@@ -1517,10 +1539,11 @@ void Sample_TempObstacles::loadAll(const char* path)
 		if (!tileHeader.tileRef || !tileHeader.dataSize)
 			break;
 
-		unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
-		if (!data) break;
+		unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM); // 分配对应的内存
+		if (!data)
+			break;
 		memset(data, 0, tileHeader.dataSize);
-		size_t tileDataReadReturnCode = fread(data, tileHeader.dataSize, 1, fp);
+		size_t tileDataReadReturnCode = fread(data, tileHeader.dataSize, 1, fp); // 读取 tile 的数据
 		if( tileDataReadReturnCode != 1)
 		{
 			// Error or early EOF
@@ -1530,14 +1553,14 @@ void Sample_TempObstacles::loadAll(const char* path)
 		}
 		
 		dtCompressedTileRef tile = 0;
-		dtStatus addTileStatus = m_tileCache->addTile(data, tileHeader.dataSize, DT_COMPRESSEDTILE_FREE_DATA, &tile);
+		dtStatus addTileStatus = m_tileCache->addTile(data, tileHeader.dataSize, DT_COMPRESSEDTILE_FREE_DATA, &tile); // 将 tile 加入到 tileCache 管理中
 		if (dtStatusFailed(addTileStatus))
 		{
 			dtFree(data);
 		}
 
 		if (tile)
-			m_tileCache->buildNavMeshTile(tile, m_navMesh);
+			m_tileCache->buildNavMeshTile(tile, m_navMesh); // load 的过程需要重新为每个 tile 生成 navmesh
 	}
 	
 	fclose(fp);

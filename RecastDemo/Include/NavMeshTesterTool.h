@@ -23,6 +23,7 @@
 #include "DetourNavMesh.h"
 #include "DetourNavMeshQuery.h"
 
+// navmesh 测试工具类，封装了寻路接口
 class NavMeshTesterTool : public SampleTool
 {
 	Sample* m_sample;
@@ -34,6 +35,7 @@ class NavMeshTesterTool : public SampleTool
 
 	dtStatus m_pathFindStatus;
 
+	// gui 左边可选的所有测试模式的枚举
 	enum ToolMode
 	{
 		TOOLMODE_PATHFIND_FOLLOW,
@@ -80,8 +82,8 @@ class NavMeshTesterTool : public SampleTool
 	float m_distanceToWall;
 	float m_neighbourhoodRadius;
 	float m_randomRadius;
-	bool m_sposSet;
-	bool m_eposSet;
+	bool m_sposSet; // 起始点设置标记
+	bool m_eposSet; // 结束点设置标记
 
 	int m_pathIterNum;
 	dtPolyRef m_pathIterPolys[MAX_POLYS]; 

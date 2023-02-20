@@ -464,18 +464,21 @@ void NavMeshTesterTool::handleMenu()
 	imguiSeparator();	
 }
 
+// 处理点击事件
+// 鼠标左右键会处理成 shift 标记，右键 shift 为 true，左键 shift 为 false
 void NavMeshTesterTool::handleClick(const float* /*s*/, const float* p, bool shift)
 {
 	if (shift)
 	{
-		m_sposSet = true;
+		m_sposSet = true; // 标记起点设置记录
 		dtVcopy(m_spos, p);
 	}
 	else
 	{
-		m_eposSet = true;
+		m_eposSet = true; // 标记终点设置记录
 		dtVcopy(m_epos, p);
 	}
+	// 重新计算路径
 	recalc();
 }
 
@@ -675,7 +678,7 @@ void NavMeshTesterTool::reset()
 	m_distanceToWall = 0;
 }
 
-
+// 重新计算寻路，Detour 的寻路过程
 void NavMeshTesterTool::recalc()
 {
 	if (!m_navMesh)
@@ -684,19 +687,19 @@ void NavMeshTesterTool::recalc()
 	if (m_sposSet)
 		m_navQuery->findNearestPoly(m_spos, m_polyPickExt, &m_filter, &m_startRef, 0);
 	else
-		m_startRef = 0;
+		m_startRef = 0; // 在没有设置起始点时，会将 m_startRef 初始化
 	
 	if (m_eposSet)
 		m_navQuery->findNearestPoly(m_epos, m_polyPickExt, &m_filter, &m_endRef, 0);
 	else
-		m_endRef = 0;
+		m_endRef = 0; // 在没有设置终止点时，会将 m_endRef 初始化
 	
 	m_pathFindStatus = DT_FAILURE;
 	
 	if (m_toolMode == TOOLMODE_PATHFIND_FOLLOW)
 	{
 		m_pathIterNum = 0;
-		if (m_sposSet && m_eposSet && m_startRef && m_endRef)
+		if (m_sposSet && m_eposSet && m_startRef && m_endRef) // 需要 start 和 end 都设置了，并且都可以找到对应的 poly ref
 		{
 #ifdef DUMP_REQS
 			printf("pi  %f %f %f  %f %f %f  0x%x 0x%x\n",
@@ -704,6 +707,7 @@ void NavMeshTesterTool::recalc()
 				   m_filter.getIncludeFlags(), m_filter.getExcludeFlags()); 
 #endif
 
+			// 进行寻路，m_polys 会保存查找到的路径
 			m_navQuery->findPath(m_startRef, m_endRef, m_spos, m_epos, &m_filter, m_polys, &m_npolys, MAX_POLYS);
 
 			m_nsmoothPath = 0;

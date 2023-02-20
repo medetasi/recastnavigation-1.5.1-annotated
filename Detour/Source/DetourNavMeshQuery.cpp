@@ -223,6 +223,7 @@ dtStatus dtNavMeshQuery::init(const dtNavMesh* nav, const int maxNodes)
 	return DT_SUCCESS;
 }
 
+// 查找一个随机点
 dtStatus dtNavMeshQuery::findRandomPoint(const dtQueryFilter* filter, float (*frand)(),
 										 dtPolyRef* randomRef, float* randomPt) const
 {
@@ -620,6 +621,7 @@ dtStatus dtNavMeshQuery::getPolyHeight(dtPolyRef ref, const float* pos, float* h
 		: DT_FAILURE | DT_INVALID_PARAM;
 }
 
+// 查找最近的 poly 的查询方法类
 class dtFindNearestPolyQuery : public dtPolyQuery
 {
 	const dtNavMeshQuery* m_query;
@@ -641,10 +643,12 @@ public:
 	const float* nearestPoint() const { return m_nearestPoint; }
 	bool isOverPoly() const { return m_overPoly; }
 
+	// 从所有符合条件的 poly 中找到最近的
 	void process(const dtMeshTile* tile, dtPoly** polys, dtPolyRef* refs, int count)
 	{
-		dtIgnoreUnused(polys);
+		dtIgnoreUnused(polys); // polys 没用，忽略警告提示
 
+		// 遍历所有 poly，查找最近的
 		for (int i = 0; i < count; ++i)
 		{
 			dtPolyRef ref = refs[i];
@@ -652,10 +656,13 @@ public:
 			float diff[3];
 			bool posOverPoly = false;
 			float d;
+
+			// 查询 poly 上离 center 最近的点，判断 center 是否在 poly 上
 			m_query->closestPointOnPoly(ref, m_center, closestPtPoly, &posOverPoly);
 
 			// If a point is directly over a polygon and closer than
 			// climb height, favor that instead of straight line nearest point.
+			// 分情况计算实际距离
 			dtVsub(diff, m_center, closestPtPoly);
 			if (posOverPoly)
 			{
@@ -666,7 +673,8 @@ public:
 			{
 				d = dtVlenSqr(diff);
 			}
-			
+
+			// 比较并保存最短距离
 			if (d < m_nearestDistanceSqr)
 			{
 				dtVcopy(m_nearestPoint, closestPtPoly);
@@ -699,6 +707,7 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 
 // If center and nearestPt point to an equal position, isOverPoly will be true;
 // however there's also a special case of climb height inside the polygon (see dtFindNearestPolyQuery)
+// 查找一个点离它最近的一个 poly
 dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfExtents,
 										 const dtQueryFilter* filter,
 										 dtPolyRef* nearestRef, float* nearestPt, bool* isOverPoly) const
@@ -710,13 +719,14 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 
 	// queryPolygons below will check rest of params
 	
-	dtFindNearestPolyQuery query(this, center);
+	dtFindNearestPolyQuery query(this, center); // 创建查询的实例对象
 
-	dtStatus status = queryPolygons(center, halfExtents, filter, &query);
+	dtStatus status = queryPolygons(center, halfExtents, filter, &query); // 执行 query 对象关联的查询
 	if (dtStatusFailed(status))
 		return status;
 
-	*nearestRef = query.nearestRef();
+	*nearestRef = query.nearestRef(); // 获取查询到的结果
+	
 	// Only override nearestPt if we actually found a poly so the nearest point
 	// is valid.
 	if (nearestPt && *nearestRef)
@@ -729,11 +739,12 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 	return DT_SUCCESS;
 }
 
+// 查询在 tile 中的所有 poly
 void dtNavMeshQuery::queryPolygonsInTile(const dtMeshTile* tile, const float* qmin, const float* qmax,
 										 const dtQueryFilter* filter, dtPolyQuery* query) const
 {
 	dtAssert(m_nav);
-	static const int batchSize = 32;
+	static const int batchSize = 32; // 查找 32 次
 	dtPolyRef polyRefs[batchSize];
 	dtPoly* polys[batchSize];
 	int n = 0;
@@ -803,6 +814,8 @@ void dtNavMeshQuery::queryPolygonsInTile(const dtMeshTile* tile, const float* qm
 	{
 		float bmin[3], bmax[3];
 		const dtPolyRef base = m_nav->getPolyRefBase(tile);
+
+		// 遍历 tile 中所有的 poly
 		for (int i = 0; i < tile->header->polyCount; ++i)
 		{
 			dtPoly* p = &tile->polys[i];
@@ -817,12 +830,16 @@ void dtNavMeshQuery::queryPolygonsInTile(const dtMeshTile* tile, const float* qm
 			const float* v = &tile->verts[p->verts[0]*3];
 			dtVcopy(bmin, v);
 			dtVcopy(bmax, v);
+
+			// 遍历 poly 的所有顶点，找到最小点和最大点
 			for (int j = 1; j < p->vertCount; ++j)
 			{
 				v = &tile->verts[p->verts[j]*3];
 				dtVmin(bmin, v);
 				dtVmax(bmax, v);
 			}
+
+			// 判断 poly 和 param 要找的范围是否重叠
 			if (dtOverlapBounds(qmin, qmax, bmin, bmax))
 			{
 				polyRefs[n] = ref;
@@ -925,32 +942,42 @@ dtStatus dtNavMeshQuery::queryPolygons(const float* center, const float* halfExt
 {
 	dtAssert(m_nav);
 
-	if (!center || !dtVisfinite(center) ||
-		!halfExtents || !dtVisfinite(halfExtents) ||
-		!filter || !query)
+	if (!center || !dtVisfinite(center) || !halfExtents || !dtVisfinite(halfExtents) ||	!filter || !query)
 	{
 		return DT_FAILURE | DT_INVALID_PARAM;
 	}
 
+	// 通过中心点 center 和偏移值 halfExtents 来计算出了左下点 bmin 和右上点 bmax，通过 bmin 和 bmax 确定了一个范围
+	// halfExtents 在测试 demo 中是固定值 {2, 4, 2}，实际使用中可能需要考虑这个值的设定
+	// halfExtents 的单位是米
+	// bmin 的值为 {center.x - 2, center.y - 4, center.z - 2}
+	// bmax 的值为 {center.x + 2, center.y + 4, center.z + 2}
 	float bmin[3], bmax[3];
 	dtVsub(bmin, center, halfExtents);
 	dtVadd(bmax, center, halfExtents);
 	
 	// Find tiles the query touches.
+	// 计算 bmin 和 bmax 框定的范围对应的 tile 的范围
+	// 如果 halfExtents 设置正常，那么 minx/maxx, miny/maxy 应该大致相等
+	// 理论上来说 halfExtents 应该只用处理极端情况即可，比如在 tile 边缘之类的
 	int minx, miny, maxx, maxy;
-	m_nav->calcTileLoc(bmin, &minx, &miny);
-	m_nav->calcTileLoc(bmax, &maxx, &maxy);
+	m_nav->calcTileLoc(bmin, &minx, &miny); // 计算 bmin 在以 tile 划分的坐标中的 x 和 y
+	m_nav->calcTileLoc(bmax, &maxx, &maxy); // 计算 bmax 在以 tile 划分的坐标中的 x 和 y
 
 	static const int MAX_NEIS = 32;
 	const dtMeshTile* neis[MAX_NEIS];
-	
+
+	// 遍历 bmin 到 bmax 之间的每一个 tile 进行查找
+	// 正常情况下这里需要遍历到的 tile 数量应该很少
 	for (int y = miny; y <= maxy; ++y)
 	{
 		for (int x = minx; x <= maxx; ++x)
 		{
-			const int nneis = m_nav->getTilesAt(x,y,neis,MAX_NEIS);
+			// 拿到 x/y 位置上的所有 tile
+			const int nneis = m_nav->getTilesAt(x, y, neis, MAX_NEIS);
 			for (int j = 0; j < nneis; ++j)
 			{
+				// 查找 tile 中的 poly，找到离 center 最近的
 				queryPolygonsInTile(neis[j], bmin, bmax, filter, query);
 			}
 		}
@@ -970,6 +997,7 @@ dtStatus dtNavMeshQuery::queryPolygons(const float* center, const float* halfExt
 /// The start and end positions are used to calculate traversal costs. 
 /// (The y-values impact the result.)
 ///
+/// path 是最终寻路的路径，pathCount 是 path 的长度，dtPolyRef 是 uint 类型，指编号
 dtStatus dtNavMeshQuery::findPath(dtPolyRef startRef, dtPolyRef endRef,
 								  const float* startPos, const float* endPos,
 								  const dtQueryFilter* filter,
@@ -985,6 +1013,7 @@ dtStatus dtNavMeshQuery::findPath(dtPolyRef startRef, dtPolyRef endRef,
 	*pathCount = 0;
 	
 	// Validate input
+	// 检查输入参数的合法性
 	if (!m_nav->isValidPolyRef(startRef) || !m_nav->isValidPolyRef(endRef) ||
 		!startPos || !dtVisfinite(startPos) ||
 		!endPos || !dtVisfinite(endPos) ||
@@ -993,16 +1022,19 @@ dtStatus dtNavMeshQuery::findPath(dtPolyRef startRef, dtPolyRef endRef,
 		return DT_FAILURE | DT_INVALID_PARAM;
 	}
 
+	// 如果开始等于结束，那么直接返回寻路成功
 	if (startRef == endRef)
 	{
 		path[0] = startRef;
 		*pathCount = 1;
 		return DT_SUCCESS;
 	}
-	
+
+	// 清理池，理论上来说清理放在每次的最后更好吧？
 	m_nodePool->clear();
 	m_openList->clear();
-	
+
+	// 初始化寻路的起始点
 	dtNode* startNode = m_nodePool->getNode(startRef);
 	dtVcopy(startNode->pos, startPos);
 	startNode->pidx = 0;
@@ -1016,7 +1048,8 @@ dtStatus dtNavMeshQuery::findPath(dtPolyRef startRef, dtPolyRef endRef,
 	float lastBestNodeCost = startNode->total;
 	
 	bool outOfNodes = false;
-	
+
+	// A* 寻路的过程
 	while (!m_openList->empty())
 	{
 		// Remove node from open list and put it in closed list.

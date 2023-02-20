@@ -135,6 +135,7 @@ static int parseFace(char* row, int* data, int n, int vcnt)
 	return j;
 }
 
+// 从文件中加载数据
 bool rcMeshLoaderObj::load(const std::string& filename)
 {
 	char* buf = 0;
@@ -146,7 +147,7 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 		fclose(fp);
 		return false;
 	}
-	long bufSize = ftell(fp);
+	long bufSize = ftell(fp); // 获取二进制文件的长度
 	if (bufSize < 0)
 	{
 		fclose(fp);
@@ -157,16 +158,16 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 		fclose(fp);
 		return false;
 	}
-	buf = new char[bufSize];
+	buf = new char[bufSize]; // 一次性分配所有内存
 	if (!buf)
 	{
 		fclose(fp);
 		return false;
 	}
-	size_t readLen = fread(buf, bufSize, 1, fp);
+	size_t readLen = fread(buf, bufSize, 1, fp); // 将所有数据作为一个对象一次读入内存中
 	fclose(fp);
 
-	if (readLen != 1)
+	if (readLen != 1) // fread 返回的是读取成功的对象数，由于将所有数据作为一个对象，所以返回 1 说明读取成功
 	{
 		delete[] buf;
 		return false;
@@ -180,7 +181,8 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 	int nv;
 	int vcap = 0;
 	int tcap = 0;
-	
+
+	// 循环直到所有数据都处理完毕，按照 obj 格式的内容逐行解析
 	while (src < srcEnd)
 	{
 		// Parse one row
@@ -210,7 +212,7 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 		}
 	}
 
-	delete [] buf;
+	delete [] buf; // 释放内存
 
 	// Calculate normals.
 	m_normals = new float[m_triCount*3];

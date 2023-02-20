@@ -96,10 +96,11 @@ struct SampleToolState {
 	virtual void handleUpdate(const float dt) = 0;
 };
 
+// demo 的抽象基类
 class Sample
 {
 protected:
-	class InputGeom* m_geom;
+	class InputGeom* m_geom; // 输入的 mesh
 	class dtNavMesh* m_navMesh;
 	class dtNavMeshQuery* m_navQuery;
 	class dtCrowd* m_crowd;

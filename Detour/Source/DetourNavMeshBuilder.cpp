@@ -393,8 +393,8 @@ bool dtCreateNavMeshData(dtNavMeshCreateParams* params, unsigned char** outData,
 		detailTriCount = params->detailTriCount;
 		for (int i = 0; i < params->polyCount; ++i)
 		{
-			const unsigned short* p = &params->polys[i*nvp*2];
-			int ndv = params->detailMeshes[i*4+1];
+			const unsigned short* p = &params->polys[i * nvp * 2];
+			int ndv = params->detailMeshes[i * 4 + 1];
 			int nv = 0;
 			for (int j = 0; j < nvp; ++j)
 			{
@@ -412,14 +412,14 @@ bool dtCreateNavMeshData(dtNavMeshCreateParams* params, unsigned char** outData,
 		detailTriCount = 0;
 		for (int i = 0; i < params->polyCount; ++i)
 		{
-			const unsigned short* p = &params->polys[i*nvp*2];
+			const unsigned short* p = &params->polys[i * nvp * 2];
 			int nv = 0;
 			for (int j = 0; j < nvp; ++j)
 			{
 				if (p[j] == MESH_NULL_IDX) break;
 				nv++;
 			}
-			detailTriCount += nv-2;
+			detailTriCount += nv - 2;
 		}
 	}
 	

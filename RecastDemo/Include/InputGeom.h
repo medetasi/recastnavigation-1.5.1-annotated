@@ -69,6 +69,7 @@ struct BuildSettings
 	float tileSize;
 };
 
+// 输入的几何图形
 class InputGeom
 {
 	rcChunkyTriMesh* m_chunkyMesh;

@@ -47,6 +47,7 @@
 #endif
 
 
+// 计算比参数大的最近的一个 2 的幂
 inline unsigned int nextPow2(unsigned int v)
 {
 	v--;
@@ -240,22 +241,25 @@ void Sample_TileMesh::handleSettings()
 	{
 		char text[64];
 		int gw = 0, gh = 0;
-		const float* bmin = m_geom->getNavMeshBoundsMin();
-		const float* bmax = m_geom->getNavMeshBoundsMax();
-		rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
+		const float* bmin = m_geom->getNavMeshBoundsMin(); // mesh 的左下角
+		const float* bmax = m_geom->getNavMeshBoundsMax(); // mesh 的右上角
+		rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh); // 计算以 cell 为单位的宽和高
 		const int ts = (int)m_tileSize;
-		const int tw = (gw + ts-1) / ts;
-		const int th = (gh + ts-1) / ts;
-		snprintf(text, 64, "Tiles  %d x %d", tw, th);
+		const int tw = (gw + ts - 1) / ts; // 计算以 tile 为单位的宽度
+		const int th = (gh + ts - 1) / ts; // 计算以 tile 为单位的高度
+		snprintf(text, 64, "Tiles  %d x %d", tw, th); // 输出到 gui 上
 		imguiValue(text);
 
 		// Max tiles and max polys affect how the tile IDs are caculated.
 		// There are 22 bits available for identifying a tile and a polygon.
-		int tileBits = rcMin((int)ilog2(nextPow2(tw*th)), 14);
-		if (tileBits > 14) tileBits = 14;
-		int polyBits = 22 - tileBits;
-		m_maxTiles = 1 << tileBits;
-		m_maxPolysPerTile = 1 << polyBits;
+		// tile 和 poly 的总数一共分 22 位的计数
+		// tile 的上限是 2 ^ 14 个
+		int tileBits = rcMin((int)ilog2(nextPow2(tw * th)), 14);
+		if (tileBits > 14)
+			tileBits = 14;
+		int polyBits = 22 - tileBits; // 根据 tile 的 bit 数算 poly 的 bit 数
+		m_maxTiles = 1 << tileBits; // 计算 tile 的最大值
+		m_maxPolysPerTile = 1 << polyBits; // 计算 tile 中的 poly 的最大值
 		snprintf(text, 64, "Max Tiles  %d", m_maxTiles);
 		imguiValue(text);
 		snprintf(text, 64, "Max Polys  %d", m_maxPolysPerTile);
@@ -274,13 +278,13 @@ void Sample_TileMesh::handleSettings()
 	
 	if (imguiButton("Save"))
 	{
-		Sample::saveAll("all_tiles_navmesh.bin", m_navMesh);
+		Sample::saveAll("all_tiles_navmesh.bin", m_navMesh); // 保存结果，名字也是直接写死的
 	}
 
 	if (imguiButton("Load"))
 	{
 		dtFreeNavMesh(m_navMesh);
-		m_navMesh = Sample::loadAll("all_tiles_navmesh.bin");
+		m_navMesh = Sample::loadAll("all_tiles_navmesh.bin"); // load 会直接加载同名文件
 		m_navQuery->init(m_navMesh, 2048);
 	}
 
@@ -605,10 +609,10 @@ bool Sample_TileMesh::handleBuild()
 
 	dtNavMeshParams params;
 	rcVcopy(params.orig, m_geom->getNavMeshBoundsMin());
-	params.tileWidth = m_tileSize*m_cellSize;
-	params.tileHeight = m_tileSize*m_cellSize;
-	params.maxTiles = m_maxTiles;
-	params.maxPolys = m_maxPolysPerTile;
+	params.tileWidth = m_tileSize * m_cellSize; // 计算 tile 的宽度
+	params.tileHeight = m_tileSize * m_cellSize; // 计算 tile 的高度
+	params.maxTiles = m_maxTiles; // 最大 tile 数量
+	params.maxPolys = m_maxPolysPerTile; // 每个 tile 中最大的 poly 数量
 	
 	dtStatus status;
 	
@@ -726,39 +730,40 @@ void Sample_TileMesh::buildAllTiles()
 	if (!m_geom) return;
 	if (!m_navMesh) return;
 	
-	const float* bmin = m_geom->getNavMeshBoundsMin();
-	const float* bmax = m_geom->getNavMeshBoundsMax();
+	const float* bmin = m_geom->getNavMeshBoundsMin(); // mesh 左下角的点
+	const float* bmax = m_geom->getNavMeshBoundsMax(); // mesh 右上角的点
 	int gw = 0, gh = 0;
-	rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
+	rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh); // 计算以 cell 为单位的长和宽
 	const int ts = (int)m_tileSize;
-	const int tw = (gw + ts-1) / ts;
-	const int th = (gh + ts-1) / ts;
-	const float tcs = m_tileSize*m_cellSize;
+	const int tw = (gw + ts-1) / ts; // 计算以 tile 为单位的宽度
+	const int th = (gh + ts-1) / ts; // 计算以 tile 位单位的高度
+	const float tcs = m_tileSize * m_cellSize; // 计算 tile 的边长
 
 	
 	// Start the build process.
 	m_ctx->startTimer(RC_TIMER_TEMP);
 
+	// 对每一块 tile 执行 build
 	for (int y = 0; y < th; ++y)
 	{
 		for (int x = 0; x < tw; ++x)
 		{
-			m_lastBuiltTileBmin[0] = bmin[0] + x*tcs;
+			m_lastBuiltTileBmin[0] = bmin[0] + x * tcs;
 			m_lastBuiltTileBmin[1] = bmin[1];
-			m_lastBuiltTileBmin[2] = bmin[2] + y*tcs;
-			
-			m_lastBuiltTileBmax[0] = bmin[0] + (x+1)*tcs;
+			m_lastBuiltTileBmin[2] = bmin[2] + y * tcs;
+
+			m_lastBuiltTileBmax[0] = bmin[0] + (x + 1) * tcs;
 			m_lastBuiltTileBmax[1] = bmax[1];
-			m_lastBuiltTileBmax[2] = bmin[2] + (y+1)*tcs;
-			
+			m_lastBuiltTileBmax[2] = bmin[2] + (y + 1) * tcs;
+
 			int dataSize = 0;
-			unsigned char* data = buildTileMesh(x, y, m_lastBuiltTileBmin, m_lastBuiltTileBmax, dataSize);
+			unsigned char* data = buildTileMesh(x, y, m_lastBuiltTileBmin, m_lastBuiltTileBmax, dataSize); // build tile 内部的处理
 			if (data)
 			{
 				// Remove any previous data (navmesh owns and deletes the data).
-				m_navMesh->removeTile(m_navMesh->getTileRefAt(x,y,0),0,0);
+				m_navMesh->removeTile(m_navMesh->getTileRefAt(x, y, 0), 0, 0);
 				// Let the navmesh own the data.
-				dtStatus status = m_navMesh->addTile(data,dataSize,DT_TILE_FREE_DATA,0,0);
+				dtStatus status = m_navMesh->addTile(data, dataSize, DT_TILE_FREE_DATA, 0, 0);
 				if (dtStatusFailed(status))
 					dtFree(data);
 			}

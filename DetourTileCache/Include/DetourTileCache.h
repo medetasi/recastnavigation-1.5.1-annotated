@@ -225,9 +225,9 @@ private:
 	int m_tileLutSize;						///< Tile hash lookup size (must be pot).
 	int m_tileLutMask;						///< Tile hash lookup mask.
 	
-	dtCompressedTile** m_posLookup;			///< Tile hash lookup.
+	dtCompressedTile** m_posLookup;			///< Tile hash lookup. 保存所有 tile 的引用，索引是 x/y 的哈希值，同位置不同层的 tile 在同一条链表上
 	dtCompressedTile* m_nextFreeTile;		///< Freelist of tiles.
-	dtCompressedTile* m_tiles;				///< List of tiles.
+	dtCompressedTile* m_tiles;				///< List of tiles. 保存所有 tile，索引为 ID
 	
 	unsigned int m_saltBits;				///< Number of salt bits in the tile ID.
 	unsigned int m_tileBits;				///< Number of tile bits in the tile ID.

@@ -436,6 +436,7 @@ bool dtOverlapPolyPoly2D(const float* polya, const int npolya,
 /// @name Miscellanious functions.
 /// @{
 
+// 计算给定值下一个的 2 的幂
 inline unsigned int dtNextPow2(unsigned int v)
 {
 	v--;

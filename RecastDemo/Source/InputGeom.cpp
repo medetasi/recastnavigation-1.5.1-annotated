@@ -120,10 +120,11 @@ InputGeom::~InputGeom()
 	delete m_chunkyMesh;
 	delete m_mesh;
 }
-		
+
+// 加载 mesh 文件
 bool InputGeom::loadMesh(rcContext* ctx, const std::string& filepath)
 {
-	if (m_mesh)
+	if (m_mesh) // 如果已经加载过了
 	{
 		delete m_chunkyMesh;
 		m_chunkyMesh = 0;
@@ -133,7 +134,7 @@ bool InputGeom::loadMesh(rcContext* ctx, const std::string& filepath)
 	m_offMeshConCount = 0;
 	m_volumeCount = 0;
 	
-	m_mesh = new rcMeshLoaderObj;
+	m_mesh = new rcMeshLoaderObj; // 创建 mesh 对象
 	if (!m_mesh)
 	{
 		ctx->log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.");

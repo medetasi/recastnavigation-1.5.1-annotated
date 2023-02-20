@@ -168,7 +168,7 @@ struct dtPoly
 	unsigned short flags;
 
 	/// The number of vertices in the polygon.
-	unsigned char vertCount;
+	unsigned char vertCount; // 顶点数量
 
 	/// The bit packed area id and polygon type.
 	/// @note Use the structure's set and get methods to acess this value.
@@ -586,7 +586,7 @@ public:
 		const dtPolyRef tileMask = ((dtPolyRef)1<<DT_TILE_BITS)-1;
 		return (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
 #else
-		const dtPolyRef tileMask = ((dtPolyRef)1<<m_tileBits)-1;
+		const dtPolyRef tileMask = ((dtPolyRef)1 << m_tileBits) - 1;
 		return (unsigned int)((ref >> m_polyBits) & tileMask);
 #endif
 	}
@@ -661,9 +661,9 @@ private:
 	float m_tileWidth, m_tileHeight;	///< Dimensions of each tile.
 	int m_maxTiles;						///< Max number of tiles.
 	int m_tileLutSize;					///< Tile hash lookup size (must be pot).
-	int m_tileLutMask;					///< Tile hash lookup mask.
+	int m_tileLutMask;					///< Tile hash lookup mask. 用于计算哈希值
 
-	dtMeshTile** m_posLookup;			///< Tile hash lookup.
+	dtMeshTile** m_posLookup;			///< Tile hash lookup. 哈希桶
 	dtMeshTile* m_nextFree;				///< Freelist of tiles.
 	dtMeshTile* m_tiles;				///< List of tiles.
 		

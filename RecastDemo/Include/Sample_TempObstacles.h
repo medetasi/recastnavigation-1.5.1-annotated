@@ -24,19 +24,19 @@
 #include "Recast.h"
 #include "ChunkyTriMesh.h"
 
-
+// ob 的测试类
 class Sample_TempObstacles : public Sample
 {
 protected:
-	bool m_keepInterResults;
+	bool m_keepInterResults; // 是否保存中间数据
 
 	struct LinearAllocator* m_talloc;
 	struct FastLZCompressor* m_tcomp;
 	struct MeshProcess* m_tmproc;
 
-	class dtTileCache* m_tileCache;
+	class dtTileCache* m_tileCache; // tileCache
 	
-	float m_cacheBuildTimeMs;
+	float m_cacheBuildTimeMs; // build 用时
 	int m_cacheCompressedSize;
 	int m_cacheRawSize;
 	int m_cacheLayerCount;

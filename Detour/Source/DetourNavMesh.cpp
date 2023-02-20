@@ -138,7 +138,8 @@ inline void freeLink(dtMeshTile* tile, unsigned int link)
 dtNavMesh* dtAllocNavMesh()
 {
 	void* mem = dtAlloc(sizeof(dtNavMesh), DT_ALLOC_PERM);
-	if (!mem) return 0;
+	if (!mem)
+		return 0;
 	return new(mem) dtNavMesh;
 }
 
@@ -230,20 +231,21 @@ dtStatus dtNavMesh::init(const dtNavMeshParams* params)
 	
 	// Init tiles
 	m_maxTiles = params->maxTiles;
-	m_tileLutSize = dtNextPow2(params->maxTiles/4);
-	if (!m_tileLutSize) m_tileLutSize = 1;
-	m_tileLutMask = m_tileLutSize-1;
-	
-	m_tiles = (dtMeshTile*)dtAlloc(sizeof(dtMeshTile)*m_maxTiles, DT_ALLOC_PERM);
+	m_tileLutSize = dtNextPow2(params->maxTiles / 4);
+	if (!m_tileLutSize)
+		m_tileLutSize = 1;
+	m_tileLutMask = m_tileLutSize - 1;
+
+	m_tiles = (dtMeshTile*)dtAlloc(sizeof(dtMeshTile) * m_maxTiles, DT_ALLOC_PERM); // 分配所有 tile 的内存
 	if (!m_tiles)
 		return DT_FAILURE | DT_OUT_OF_MEMORY;
-	m_posLookup = (dtMeshTile**)dtAlloc(sizeof(dtMeshTile*)*m_tileLutSize, DT_ALLOC_PERM);
+	m_posLookup = (dtMeshTile**)dtAlloc(sizeof(dtMeshTile*) * m_tileLutSize, DT_ALLOC_PERM);
 	if (!m_posLookup)
 		return DT_FAILURE | DT_OUT_OF_MEMORY;
-	memset(m_tiles, 0, sizeof(dtMeshTile)*m_maxTiles);
-	memset(m_posLookup, 0, sizeof(dtMeshTile*)*m_tileLutSize);
+	memset(m_tiles, 0, sizeof(dtMeshTile) * m_maxTiles);
+	memset(m_posLookup, 0, sizeof(dtMeshTile*) * m_tileLutSize);
 	m_nextFree = 0;
-	for (int i = m_maxTiles-1; i >= 0; --i)
+	for (int i = m_maxTiles - 1; i >= 0; --i)
 	{
 		m_tiles[i].salt = 1;
 		m_tiles[i].next = m_nextFree;
@@ -384,19 +386,22 @@ void dtNavMesh::unconnectLinks(dtMeshTile* tile, dtMeshTile* target)
 	}
 }
 
+// 尝试连接 tile 到 target，单向的
 void dtNavMesh::connectExtLinks(dtMeshTile* tile, dtMeshTile* target, int side)
 {
-	if (!tile) return;
+	if (!tile)
+		return;
 	
 	// Connect border links.
+	// 遍历所有的 poly
 	for (int i = 0; i < tile->header->polyCount; ++i)
 	{
-		dtPoly* poly = &tile->polys[i];
+		dtPoly* poly = &tile->polys[i]; // 拿到 poly
 
 		// Create new links.
 //		unsigned short m = DT_EXT_LINK | (unsigned short)side;
 		
-		const int nv = poly->vertCount;
+		const int nv = poly->vertCount; // 顶点数量
 		for (int j = 0; j < nv; ++j)
 		{
 			// Skip non-portal edges.
@@ -408,17 +413,17 @@ void dtNavMesh::connectExtLinks(dtMeshTile* tile, dtMeshTile* target, int side)
 				continue;
 			
 			// Create new links
-			const float* va = &tile->verts[poly->verts[j]*3];
-			const float* vb = &tile->verts[poly->verts[(j+1) % nv]*3];
+			const float* va = &tile->verts[poly->verts[j] * 3];
+			const float* vb = &tile->verts[poly->verts[(j + 1) % nv] * 3];
 			dtPolyRef nei[4];
-			float neia[4*2];
-			int nnei = findConnectingPolys(va,vb, target, dtOppositeTile(dir), nei,neia,4);
+			float neia[4 * 2];
+			int nnei = findConnectingPolys(va, vb, target, dtOppositeTile(dir), nei, neia, 4);
 			for (int k = 0; k < nnei; ++k)
 			{
-				unsigned int idx = allocLink(tile);
+				unsigned int idx = allocLink(tile); // 从 linksFreeList 上拿一个空索引
 				if (idx != DT_NULL_LINK)
 				{
-					dtLink* link = &tile->links[idx];
+					dtLink* link = &tile->links[idx]; // 拿到对应的 link
 					link->ref = nei[k];
 					link->edge = (unsigned char)j;
 					link->side = (unsigned char)dir;
@@ -429,21 +434,21 @@ void dtNavMesh::connectExtLinks(dtMeshTile* tile, dtMeshTile* target, int side)
 					// Compress portal limits to a byte value.
 					if (dir == 0 || dir == 4)
 					{
-						float tmin = (neia[k*2+0]-va[2]) / (vb[2]-va[2]);
-						float tmax = (neia[k*2+1]-va[2]) / (vb[2]-va[2]);
+						float tmin = (neia[k * 2 + 0] - va[2]) / (vb[2] - va[2]);
+						float tmax = (neia[k * 2 + 1] - va[2]) / (vb[2] - va[2]);
 						if (tmin > tmax)
-							dtSwap(tmin,tmax);
-						link->bmin = (unsigned char)roundf(dtClamp(tmin, 0.0f, 1.0f)*255.0f);
-						link->bmax = (unsigned char)roundf(dtClamp(tmax, 0.0f, 1.0f)*255.0f);
+							dtSwap(tmin, tmax);
+						link->bmin = (unsigned char)roundf(dtClamp(tmin, 0.0f, 1.0f) * 255.0f);
+						link->bmax = (unsigned char)roundf(dtClamp(tmax, 0.0f, 1.0f) * 255.0f);
 					}
 					else if (dir == 2 || dir == 6)
 					{
-						float tmin = (neia[k*2+0]-va[0]) / (vb[0]-va[0]);
-						float tmax = (neia[k*2+1]-va[0]) / (vb[0]-va[0]);
+						float tmin = (neia[k * 2 + 0] - va[0]) / (vb[0] - va[0]);
+						float tmax = (neia[k * 2 + 1] - va[0]) / (vb[0] - va[0]);
 						if (tmin > tmax)
-							dtSwap(tmin,tmax);
-						link->bmin = (unsigned char)roundf(dtClamp(tmin, 0.0f, 1.0f)*255.0f);
-						link->bmax = (unsigned char)roundf(dtClamp(tmax, 0.0f, 1.0f)*255.0f);
+							dtSwap(tmin, tmax);
+						link->bmin = (unsigned char)roundf(dtClamp(tmin, 0.0f, 1.0f) * 255.0f);
+						link->bmax = (unsigned char)roundf(dtClamp(tmax, 0.0f, 1.0f) * 255.0f);
 					}
 				}
 			}
@@ -905,8 +910,8 @@ int dtNavMesh::queryPolygonsInTile(const dtMeshTile* tile, const float* qmin, co
 /// removed from this nav mesh.
 ///
 /// @see dtCreateNavMeshData, #removeTile
-dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags,
-							dtTileRef lastRef, dtTileRef* result)
+/// 将 tile 加入到 navmesh 的管理中
+dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags, dtTileRef lastRef, dtTileRef* result)
 {
 	// Make sure the data is in right format.
 	dtMeshHeader* header = (dtMeshHeader*)data;
@@ -923,6 +928,7 @@ dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags,
 #endif
 		
 	// Make sure the location is free.
+	// 尝试获取一次，如果能拿到说明位置已经被占了
 	if (getTileAt(header->x, header->y, header->layer))
 		return DT_FAILURE | DT_ALREADY_OCCUPIED;
 		
@@ -944,9 +950,10 @@ dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags,
 		if (tileIndex >= m_maxTiles)
 			return DT_FAILURE | DT_OUT_OF_MEMORY;
 		// Try to find the specific tile id from the free list.
-		dtMeshTile* target = &m_tiles[tileIndex];
+		dtMeshTile* target = &m_tiles[tileIndex]; // 拿到创建好的对象
 		dtMeshTile* prev = 0;
 		tile = m_nextFree;
+		// 遍历查找到目标列表，也就是 target 的下一个
 		while (tile && tile != target)
 		{
 			prev = tile;
@@ -970,9 +977,9 @@ dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags,
 		return DT_FAILURE | DT_OUT_OF_MEMORY;
 	
 	// Insert tile into the position lut.
-	int h = computeTileHash(header->x, header->y, m_tileLutMask);
+	int h = computeTileHash(header->x, header->y, m_tileLutMask); // 计算哈希值
 	tile->next = m_posLookup[h];
-	m_posLookup[h] = tile;
+	m_posLookup[h] = tile; // 将 tile 放在哈希桶最前面
 	
 	// Patch header pointers.
 	const int headerSize = dtAlign4(sizeof(dtMeshHeader));
@@ -1023,12 +1030,14 @@ dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags,
 	int nneis;
 	
 	// Connect with layers in current tile.
+	// 处理连通性
 	nneis = getTilesAt(header->x, header->y, neis, MAX_NEIS);
 	for (int j = 0; j < nneis; ++j)
 	{
 		if (neis[j] == tile)
 			continue;
-	
+
+		// 接口是单向的，所以要互相各调一次
 		connectExtLinks(tile, neis[j], -1);
 		connectExtLinks(neis[j], tile, -1);
 		connectExtOffMeshLinks(tile, neis[j], -1);
@@ -1054,10 +1063,11 @@ dtStatus dtNavMesh::addTile(unsigned char* data, int dataSize, int flags,
 	return DT_SUCCESS;
 }
 
+// 查找指定 x/y/layer 的 tile，应该是唯一的
 const dtMeshTile* dtNavMesh::getTileAt(const int x, const int y, const int layer) const
 {
 	// Find tile based on hash.
-	int h = computeTileHash(x,y,m_tileLutMask);
+	int h = computeTileHash(x, y, m_tileLutMask);
 	dtMeshTile* tile = m_posLookup[h];
 	while (tile)
 	{
@@ -1091,6 +1101,7 @@ int dtNavMesh::getNeighbourTilesAt(const int x, const int y, const int side, dtM
 	return getTilesAt(nx, ny, tiles, maxTiles);
 }
 
+// 获取指定 x/y 上的 tile，可能有多层，所以会有很多个
 int dtNavMesh::getTilesAt(const int x, const int y, dtMeshTile** tiles, const int maxTiles) const
 {
 	int n = 0;
@@ -1117,18 +1128,18 @@ int dtNavMesh::getTilesAt(const int x, const int y, dtMeshTile** tiles, const in
 ///
 /// This function will not fail if the tiles array is too small to hold the
 /// entire result set.  It will simply fill the array to capacity.
+/// 获取 nvmesh 在指定 tile 位置的 tile 对象，结果保存在 tiles 中
+/// 由于直接根据位置查找比较困难，所以用一个哈希桶来处理查找的过程
 int dtNavMesh::getTilesAt(const int x, const int y, dtMeshTile const** tiles, const int maxTiles) const
 {
 	int n = 0;
 	
 	// Find tile based on hash.
-	int h = computeTileHash(x,y,m_tileLutMask);
-	dtMeshTile* tile = m_posLookup[h];
-	while (tile)
+	int h = computeTileHash(x, y, m_tileLutMask); // 计算对应 tile 的 hash 值
+	dtMeshTile* tile = m_posLookup[h]; // 拿到 hash 桶
+	while (tile) // 遍历 hash 桶查找对应的值
 	{
-		if (tile->header &&
-			tile->header->x == x &&
-			tile->header->y == y)
+		if (tile->header && tile->header->x == x && tile->header->y == y)
 		{
 			if (n < maxTiles)
 				tiles[n++] = tile;
@@ -1188,10 +1199,14 @@ const dtMeshTile* dtNavMesh::getTile(int i) const
 	return &m_tiles[i];
 }
 
+// 计算 tile 的个数
 void dtNavMesh::calcTileLoc(const float* pos, int* tx, int* ty) const
 {
-	*tx = (int)floorf((pos[0]-m_orig[0]) / m_tileWidth);
-	*ty = (int)floorf((pos[2]-m_orig[2]) / m_tileHeight);
+	// m_orig 是 mesh 的最小点，左下角的点坐标
+	// m_tileWidth/m_tileHeight 分别是 tile 的长和宽，其实都等于 tileSize * cellSize
+	// 需要注意的是，tile 是一个 2D 的概念
+	*tx = (int)floorf((pos[0] - m_orig[0]) / m_tileWidth);
+	*ty = (int)floorf((pos[2] - m_orig[2]) / m_tileHeight);
 }
 
 dtStatus dtNavMesh::getTileAndPolyByRef(const dtPolyRef ref, const dtMeshTile** tile, const dtPoly** poly) const

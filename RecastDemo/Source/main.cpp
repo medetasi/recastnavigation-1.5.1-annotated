@@ -60,6 +60,8 @@ Sample* createSolo() { return new Sample_SoloMesh(); }
 Sample* createTile() { return new Sample_TileMesh(); }
 Sample* createTempObstacle() { return new Sample_TempObstacles(); }
 Sample* createDebug() { return new Sample_Debug(); }
+
+// 三种模式
 static SampleItem g_samples[] =
 {
 	{ createSolo, "Solo Mesh" },
@@ -95,12 +97,12 @@ int main(int /*argc*/, char** /*argv*/)
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
 	SDL_DisplayMode displayMode;
-	SDL_GetCurrentDisplayMode(0, &displayMode);
+	SDL_GetCurrentDisplayMode(0, &displayMode); // 拿到显示器的参数，包括分辨率长宽和刷新率
 
-	bool presentationMode = false;
+	bool presentationMode = false; // 全屏开关，兼容性不好
 	Uint32 flags = SDL_WINDOW_OPENGL;
-	int width;
-	int height;
+	int width; // gui 的宽度
+	int height; // gui 的高度
 	if (presentationMode)
 	{
 		// Create a fullscreen window at the native resolution.
@@ -110,14 +112,14 @@ int main(int /*argc*/, char** /*argv*/)
 	}
 	else
 	{
-		float aspect = 16.0f / 9.0f;
-		width = rcMin(displayMode.w, (int)(displayMode.h * aspect)) - 80;
-		height = displayMode.h - 80;
+		float aspect = 16.0f / 9.0f; // 强制按照 16:9 计算
+		width = rcMin(displayMode.w, (int)(displayMode.h * aspect)) - 80; // 用高度按比例计算长度，留了 80 像素的空间
+		height = displayMode.h - 80; // 计算高度，留了 80 像素的空间
 	}
 	
 	SDL_Window* window;
 	SDL_Renderer* renderer;
-	int errorCode = SDL_CreateWindowAndRenderer(width, height, flags, &window, &renderer);
+	int errorCode = SDL_CreateWindowAndRenderer(width, height, flags, &window, &renderer); // 创建窗口
 
 	if (errorCode != 0 || !window || !renderer)
 	{
@@ -125,9 +127,9 @@ int main(int /*argc*/, char** /*argv*/)
 		return -1;
 	}
 
-	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED); // 设置窗口的中心点为屏幕的中心点
 
-	if (!imguiRenderGLInit("DroidSans.ttf"))
+	if (!imguiRenderGLInit("DroidSans.ttf")) // 设置字体
 	{
 		printf("Could not init GUI renderer.\n");
 		SDL_Quit();
@@ -174,8 +176,8 @@ int main(int /*argc*/, char** /*argv*/)
 	float markerPosition[3] = {0, 0, 0};
 	bool markerPositionSet = false;
 	
-	InputGeom* geom = 0;
-	Sample* sample = 0;
+	InputGeom* geom = 0; // 选择的 mesh
+	Sample* sample = 0; // 选择的模式
 
 	const string testCasesFolder = "TestCases";
 	TestCase* test = 0;
@@ -201,7 +203,8 @@ int main(int /*argc*/, char** /*argv*/)
 		bool processHitTest = false;
 		bool processHitTestShift = false;
 		SDL_Event event;
-		
+
+		// 处理键鼠的 IO 事件
 		while (SDL_PollEvent(&event))
 		{
 			switch (event.type)
@@ -581,7 +584,7 @@ int main(int /*argc*/, char** /*argv*/)
 				if (imguiButton("Build"))
 				{
 					ctx.resetLog();
-					if (!sample->handleBuild())
+					if (!sample->handleBuild()) // 编译 mesh 文件
 					{
 						showLog = true;
 						logScroll = 0;
@@ -606,6 +609,7 @@ int main(int /*argc*/, char** /*argv*/)
 		}
 		
 		// Sample selection dialog.
+		// Sample 的选择界面
 		if (showSample)
 		{
 			static int levelScroll = 0;
@@ -613,13 +617,15 @@ int main(int /*argc*/, char** /*argv*/)
 				mouseOverMenu = true;
 
 			Sample* newSample = 0;
+
+			// 对比每一个可选项
 			for (int i = 0; i < g_nsamples; ++i)
 			{
-				if (imguiItem(g_samples[i].name.c_str()))
+				if (imguiItem(g_samples[i].name.c_str())) // 匹配名字，imguiItem 第二个参数有默认值为 true
 				{
-					newSample = g_samples[i].create();
+					newSample = g_samples[i].create(); // 调用对应的方法创建 sample
 					if (newSample)
-						sampleName = g_samples[i].name;
+						sampleName = g_samples[i].name; // 设置 sample 的名字
 				}
 			}
 			if (newSample)
@@ -664,6 +670,7 @@ int main(int /*argc*/, char** /*argv*/)
 		}
 		
 		// Level selection dialog.
+		// mesh 文件选择界面
 		if (showLevels)
 		{
 			static int levelScroll = 0;
@@ -691,8 +698,8 @@ int main(int /*argc*/, char** /*argv*/)
 				
 				string path = meshesFolder + "/" + meshName;
 				
-				geom = new InputGeom;
-				if (!geom->load(&ctx, path))
+				geom = new InputGeom; // 创建 mesh 加载对象
+				if (!geom->load(&ctx, path)) // 加载 mesh 文件
 				{
 					delete geom;
 					geom = 0;

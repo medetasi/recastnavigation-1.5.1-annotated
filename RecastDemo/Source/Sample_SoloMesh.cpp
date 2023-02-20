@@ -25,6 +25,9 @@
 #include "InputGeom.h"
 #include "Sample.h"
 #include "Sample_SoloMesh.h"
+
+#include <ostream>
+
 #include "Recast.h"
 #include "RecastDebugDraw.h"
 #include "RecastDump.h"
@@ -41,6 +44,9 @@
 #	define snprintf _snprintf
 #endif
 
+#include <iostream>
+using std::cout;
+using std::endl;
 
 Sample_SoloMesh::Sample_SoloMesh() :
 	m_keepInterResults(true),
@@ -79,6 +85,7 @@ void Sample_SoloMesh::cleanup()
 	m_navMesh = 0;
 }
 
+// 处理配置的 gui
 void Sample_SoloMesh::handleSettings()
 {
 	Sample::handleCommonSettings();
@@ -366,7 +373,7 @@ void Sample_SoloMesh::handleMeshChanged(class InputGeom* geom)
 	initToolStates(this);
 }
 
-
+// solo mesh 的 build 过程
 bool Sample_SoloMesh::handleBuild()
 {
 	if (!m_geom || !m_geom->getMesh())
@@ -377,26 +384,40 @@ bool Sample_SoloMesh::handleBuild()
 	
 	cleanup();
 	
-	const float* bmin = m_geom->getNavMeshBoundsMin();
-	const float* bmax = m_geom->getNavMeshBoundsMax();
-	const float* verts = m_geom->getMesh()->getVerts();
-	const int nverts = m_geom->getMesh()->getVertCount();
-	const int* tris = m_geom->getMesh()->getTris();
-	const int ntris = m_geom->getMesh()->getTriCount();
+	const float* bmin = m_geom->getNavMeshBoundsMin(); // 边界的最小值
+	const float* bmax = m_geom->getNavMeshBoundsMax(); // 边界的最大值
+	const float* verts = m_geom->getMesh()->getVerts(); // 多边形中所有顶点的坐标数组
+	const int nverts = m_geom->getMesh()->getVertCount(); // verts 中的点的个数，每个点三个数字
+	for (int i = 0, j = 0; i < nverts; ++i, j += 3)
+	{
+		cout << "vert: " << i << " {" << verts[j] << ", " << verts[j + 1] << ", " << verts[j + 2] << "} " << endl;
+	}
+	cout << endl;
+	
+	const int* tris = m_geom->getMesh()->getTris(); // 三角形的每个点在顶点坐标数组中的下标，每个三角形是一项，合起来是一个数组
+	const int ntris = m_geom->getMesh()->getTriCount(); // tris 的长度
+	for (int i = 0; i < ntris; ++i)
+	{
+		const int tri_index = tris[i];
+		cout << "tri_point: " << i << " {" << verts[tri_index * 3] << ", " << verts[tri_index * 3 + 1] << ", " << verts[tri_index * 3 + 2] << "} " << endl;
+	}
+	cout << endl;
 	
 	//
 	// Step 1. Initialize build config.
+	// Step 1. 初始化 build 参数
 	//
 	
-	// Init build configuration from GUI
+	// Init build configuration from 
+	// 将 gui 的配置值保存在 m_cfg 中
 	memset(&m_cfg, 0, sizeof(m_cfg));
-	m_cfg.cs = m_cellSize;
-	m_cfg.ch = m_cellHeight;
-	m_cfg.walkableSlopeAngle = m_agentMaxSlope;
-	m_cfg.walkableHeight = (int)ceilf(m_agentHeight / m_cfg.ch);
-	m_cfg.walkableClimb = (int)floorf(m_agentMaxClimb / m_cfg.ch);
-	m_cfg.walkableRadius = (int)ceilf(m_agentRadius / m_cfg.cs);
-	m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize);
+	m_cfg.cs = m_cellSize; // cell size
+	m_cfg.ch = m_cellHeight; // cell height
+	m_cfg.walkableSlopeAngle = m_agentMaxSlope; // agent 攀爬角度
+	m_cfg.walkableHeight = (int)ceilf(m_agentHeight / m_cfg.ch); // agent 高度
+	m_cfg.walkableClimb = (int)floorf(m_agentMaxClimb / m_cfg.ch); // agent 最大爬坡高度
+	m_cfg.walkableRadius = (int)ceilf(m_agentRadius / m_cfg.cs); // agent 的半径
+	m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize); // 边缘最大长度 / cell size
 	m_cfg.maxSimplificationError = m_edgeMaxError;
 	m_cfg.minRegionArea = (int)rcSqr(m_regionMinSize);		// Note: area = size*size
 	m_cfg.mergeRegionArea = (int)rcSqr(m_regionMergeSize);	// Note: area = size*size
@@ -407,14 +428,19 @@ bool Sample_SoloMesh::handleBuild()
 	// Set the area where the navigation will be build.
 	// Here the bounds of the input mesh are used, but the
 	// area could be specified by an user defined box, etc.
+	// 复制 vector3，将 mesh 模型的边界存在 m_cfg 中
 	rcVcopy(m_cfg.bmin, bmin);
 	rcVcopy(m_cfg.bmax, bmax);
+
+	// 通过 bmin/bmax/cs 来计算格子数，bmin/bmax/cs 的单位是米，width/height 的单位是格子
 	rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cfg.cs, &m_cfg.width, &m_cfg.height);
 
 	// Reset build times gathering.
+	// 重置计时器
 	m_ctx->resetTimers();
 
-	// Start the build process.	
+	// Start the build process.
+	// 开始及时
 	m_ctx->startTimer(RC_TIMER_TOTAL);
 	
 	m_ctx->log(RC_LOG_PROGRESS, "Building navigation:");
@@ -423,15 +449,19 @@ bool Sample_SoloMesh::handleBuild()
 	
 	//
 	// Step 2. Rasterize input polygon soup.
+	// Step 2. 体素化（Voxelization）：从源几何结构创建一个实体高度场（Solid Heightfield）
 	//
 	
 	// Allocate voxel heightfield where we rasterize our input data to.
+	// 分配内存，实体高度场 (Solid Heightfield)
 	m_solid = rcAllocHeightfield();
 	if (!m_solid)
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'solid'.");
 		return false;
 	}
+
+	// 初始化分配好的 m_solid 实体高度场
 	if (!rcCreateHeightfield(m_ctx, *m_solid, m_cfg.width, m_cfg.height, m_cfg.bmin, m_cfg.bmax, m_cfg.cs, m_cfg.ch))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
@@ -441,7 +471,7 @@ bool Sample_SoloMesh::handleBuild()
 	// Allocate array that can hold triangle area types.
 	// If you have multiple meshes you need to process, allocate
 	// and array which can hold the max number of triangles you need to process.
-	m_triareas = new unsigned char[ntris];
+	m_triareas = new unsigned char[ntris]; // 分配一个数组，用来保存三角形的区域类型，每个三角形的类型长度为一个字节
 	if (!m_triareas)
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'm_triareas' (%d).", ntris);
@@ -452,7 +482,9 @@ bool Sample_SoloMesh::handleBuild()
 	// If your input data is multiple meshes, you can transform them here, calculate
 	// the are type for each of the meshes and rasterize them.
 	memset(m_triareas, 0, ntris*sizeof(unsigned char));
-	rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
+	rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas); // 标记三角形的可行走区域
+
+	// 处理三角形攀爬区域
 	if (!rcRasterizeTriangles(m_ctx, verts, nverts, tris, m_triareas, ntris, *m_solid, m_cfg.walkableClimb))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not rasterize triangles.");
@@ -467,11 +499,14 @@ bool Sample_SoloMesh::handleBuild()
 	
 	//
 	// Step 3. Filter walkables surfaces.
+	// Step 3. 筛选可走表面（Filter walkables surfaces） ，进一步过滤可行走表面
 	//
 	
 	// Once all geoemtry is rasterized, we do initial pass of filtering to
 	// remove unwanted overhangs caused by the conservative rasterization
 	// as well as filter spans where the character cannot possibly stand.
+	// 过滤掉不合适的体素化网格
+	// 以下为 RecastDemo filter 选项中的三个
 	if (m_filterLowHangingObstacles)
 		rcFilterLowHangingWalkableObstacles(m_ctx, m_cfg.walkableClimb, *m_solid);
 	if (m_filterLedgeSpans)
@@ -482,6 +517,7 @@ bool Sample_SoloMesh::handleBuild()
 
 	//
 	// Step 4. Partition walkable surface to simple regions.
+	// Step 4. 划分可走表面为简单区域（ Partition walkable surface to simple regions）：检测实体高度场的顶部表面，并将其划分为由相邻span组成的区域
 	//
 
 	// Compact the heightfield so that it is faster to handle from now on.
@@ -711,7 +747,8 @@ bool Sample_SoloMesh::handleBuild()
 			m_ctx->log(RC_LOG_ERROR, "Could not build Detour navmesh.");
 			return false;
 		}
-		
+
+		// 创建 navmesh
 		m_navMesh = dtAllocNavMesh();
 		if (!m_navMesh)
 		{
@@ -721,7 +758,8 @@ bool Sample_SoloMesh::handleBuild()
 		}
 		
 		dtStatus status;
-		
+
+		// 初始化 navmesh
 		status = m_navMesh->init(navData, navDataSize, DT_TILE_FREE_DATA);
 		if (dtStatusFailed(status))
 		{
@@ -729,7 +767,8 @@ bool Sample_SoloMesh::handleBuild()
 			m_ctx->log(RC_LOG_ERROR, "Could not init Detour navmesh");
 			return false;
 		}
-		
+
+		// 使用 navmesh 初始化 navquery
 		status = m_navQuery->init(m_navMesh, 2048);
 		if (dtStatusFailed(status))
 		{
