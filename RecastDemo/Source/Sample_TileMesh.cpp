@@ -590,6 +590,7 @@ void Sample_TileMesh::handleMeshChanged(InputGeom* geom)
 	initToolStates(this);
 }
 
+// tilemesh build 过程
 bool Sample_TileMesh::handleBuild()
 {
 	if (!m_geom || !m_geom->getMesh())
@@ -725,6 +726,7 @@ void Sample_TileMesh::removeTile(const float* pos)
 	m_navMesh->removeTile(m_navMesh->getTileRefAt(tx,ty,0),0,0);
 }
 
+// build 所有的 tile 中的 poly
 void Sample_TileMesh::buildAllTiles()
 {
 	if (!m_geom) return;
@@ -796,6 +798,7 @@ void Sample_TileMesh::removeAllTiles()
 }
 
 
+// build tile 内部的 mesh
 unsigned char* Sample_TileMesh::buildTileMesh(const int tx, const int ty, const float* bmin, const float* bmax, int& dataSize)
 {
 	if (!m_geom || !m_geom->getMesh() || !m_geom->getChunkyMesh())
@@ -916,8 +919,7 @@ unsigned char* Sample_TileMesh::buildTileMesh(const int tx, const int ty, const 
 		m_tileTriCount += nctris;
 		
 		memset(m_triareas, 0, nctris*sizeof(unsigned char));
-		rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle,
-								verts, nverts, ctris, nctris, m_triareas);
+		rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, ctris, nctris, m_triareas);
 		
 		if (!rcRasterizeTriangles(m_ctx, verts, nverts, ctris, m_triareas, nctris, *m_solid, m_cfg.walkableClimb))
 			return 0;

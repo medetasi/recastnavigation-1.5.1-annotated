@@ -388,20 +388,20 @@ bool Sample_SoloMesh::handleBuild()
 	const float* bmax = m_geom->getNavMeshBoundsMax(); // 边界的最大值
 	const float* verts = m_geom->getMesh()->getVerts(); // 多边形中所有顶点的坐标数组
 	const int nverts = m_geom->getMesh()->getVertCount(); // verts 中的点的个数，每个点三个数字
-	for (int i = 0, j = 0; i < nverts; ++i, j += 3)
-	{
-		cout << "vert: " << i << " {" << verts[j] << ", " << verts[j + 1] << ", " << verts[j + 2] << "} " << endl;
-	}
-	cout << endl;
+	// for (int i = 0, j = 0; i < nverts; ++i, j += 3)
+	// {
+	// 	cout << "vert: " << i << " {" << verts[j] << ", " << verts[j + 1] << ", " << verts[j + 2] << "} " << endl;
+	// }
+	// cout << endl;
 	
 	const int* tris = m_geom->getMesh()->getTris(); // 三角形的每个点在顶点坐标数组中的下标，每个三角形是一项，合起来是一个数组
 	const int ntris = m_geom->getMesh()->getTriCount(); // tris 的长度
-	for (int i = 0; i < ntris; ++i)
-	{
-		const int tri_index = tris[i];
-		cout << "tri_point: " << i << " {" << verts[tri_index * 3] << ", " << verts[tri_index * 3 + 1] << ", " << verts[tri_index * 3 + 2] << "} " << endl;
-	}
-	cout << endl;
+	// for (int i = 0; i < ntris; ++i)
+	// {
+	// 	const int tri_index = tris[i];
+	// 	cout << "tri_point: " << i << " {" << verts[tri_index * 3] << ", " << verts[tri_index * 3 + 1] << ", " << verts[tri_index * 3 + 2] << "} " << endl;
+	// }
+	// cout << endl;
 	
 	//
 	// Step 1. Initialize build config.

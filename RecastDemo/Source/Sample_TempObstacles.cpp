@@ -308,6 +308,7 @@ int Sample_TempObstacles::rasterizeTileLayers(const int tx, const int ty, const 
 	rcConfig tcfg;
 	memcpy(&tcfg, &cfg, sizeof(tcfg));
 
+	// 计算以 size 为单位的最小点和最大点
 	tcfg.bmin[0] = cfg.bmin[0] + tx * tcs;
 	tcfg.bmin[1] = cfg.bmin[1];
 	tcfg.bmin[2] = cfg.bmin[2] + ty * tcs;
@@ -348,7 +349,7 @@ int Sample_TempObstacles::rasterizeTileLayers(const int tx, const int ty, const 
 	tbmin[1] = tcfg.bmin[2];
 	tbmax[0] = tcfg.bmax[0];
 	tbmax[1] = tcfg.bmax[2];
-	int cid[512];// TODO: Make grow when returning too many items.
+	int cid[5120];// TODO: Make grow when returning too many items.
 	const int ncid = rcGetChunksOverlappingRect(chunkyMesh, tbmin, tbmax, cid, 512);
 	if (!ncid)
 	{
@@ -1247,8 +1248,8 @@ bool Sample_TempObstacles::handleBuild()
 	cfg.height = cfg.tileSize + cfg.borderSize*2;
 	cfg.detailSampleDist = m_detailSampleDist < 0.9f ? 0 : m_cellSize * m_detailSampleDist;
 	cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
-	rcVcopy(cfg.bmin, bmin);
-	rcVcopy(cfg.bmax, bmax);
+	rcVcopy(cfg.bmin, bmin); // 复制最小点
+	rcVcopy(cfg.bmax, bmax); // 复制最大点
 	
 	// Tile cache params.
 	dtTileCacheParams tcparams;
@@ -1313,7 +1314,7 @@ bool Sample_TempObstacles::handleBuild()
 	
 
 	// Preprocess tiles.
-	
+	// 处理所有的 tile
 	m_ctx->resetTimers();
 	
 	m_cacheLayerCount = 0;
