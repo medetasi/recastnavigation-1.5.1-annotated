@@ -679,6 +679,7 @@ namespace
 	}
 }
 
+// 获取 poly 在指定 pos 上的高度
 bool dtNavMesh::getPolyHeight(const dtMeshTile* tile, const dtPoly* poly, const float* pos, float* height) const
 {
 	// Off-mesh connections do not have detail polys and getting height
@@ -687,7 +688,7 @@ bool dtNavMesh::getPolyHeight(const dtMeshTile* tile, const dtPoly* poly, const 
 		return false;
 
 	const unsigned int ip = (unsigned int)(poly - tile->polys);
-	const dtPolyDetail* pd = &tile->detailMeshes[ip];
+	const dtPolyDetail* pd = &tile->detailMeshes[ip]; // 拿到 poly 的详细信息
 	
 	float verts[DT_VERTS_PER_POLYGON*3];	
 	const int nv = poly->vertCount;
@@ -701,6 +702,7 @@ bool dtNavMesh::getPolyHeight(const dtMeshTile* tile, const dtPoly* poly, const 
 		return true;
 	
 	// Find height at the location.
+	// 遍历 poly 上的所有三角形
 	for (int j = 0; j < pd->triCount; ++j)
 	{
 		const unsigned char* t = &tile->detailTris[(pd->triBase+j)*4];
@@ -713,6 +715,10 @@ bool dtNavMesh::getPolyHeight(const dtMeshTile* tile, const dtPoly* poly, const 
 				v[k] = &tile->detailVerts[(pd->vertBase+(t[k]-poly->vertCount))*3];
 		}
 		float h;
+		// 计算 pos 到以 v[0] v[1] v[2] 为顶点的三角形的距离
+		// 这个距离是垂直距离还是纵轴距离？
+		// 投影距离，应该就是纵轴距离了
+		// 如果 pos 在三角形上的投影在三角形内部，该函数会返回 true 且 h 是 pos 到投影点的高度
 		if (dtClosestHeightPointTriangle(pos, v[0], v[1], v[2], h))
 		{
 			*height = h;
@@ -734,9 +740,9 @@ void dtNavMesh::closestPointOnPoly(dtPolyRef ref, const float* pos, float* close
 {
 	const dtMeshTile* tile = 0;
 	const dtPoly* poly = 0;
-	getTileAndPolyByRefUnsafe(ref, &tile, &poly);
+	getTileAndPolyByRefUnsafe(ref, &tile, &poly); // 根据 poly 的 ref 获取它所在的 tile 和 poly
 
-	dtVcopy(closest, pos);
+	dtVcopy(closest, pos); // 将 pos 的坐标拷贝到 closest 中
 	if (getPolyHeight(tile, poly, pos, &closest[1]))
 	{
 		if (posOverPoly)
@@ -1132,7 +1138,7 @@ int dtNavMesh::getTilesAt(const int x, const int y, dtMeshTile** tiles, const in
 /// 由于直接根据位置查找比较困难，所以用一个哈希桶来处理查找的过程
 int dtNavMesh::getTilesAt(const int x, const int y, dtMeshTile const** tiles, const int maxTiles) const
 {
-	int n = 0;
+	int n = 0; // 找到的 tile 的数量
 	
 	// Find tile based on hash.
 	int h = computeTileHash(x, y, m_tileLutMask); // 计算对应 tile 的 hash 值
@@ -1199,7 +1205,7 @@ const dtMeshTile* dtNavMesh::getTile(int i) const
 	return &m_tiles[i];
 }
 
-// 计算 tile 的个数
+// 计算 tile 的个数，使用的是 pos 的 x 和 z 来计算
 void dtNavMesh::calcTileLoc(const float* pos, int* tx, int* ty) const
 {
 	// m_orig 是 mesh 的最小点，左下角的点坐标

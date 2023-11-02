@@ -210,7 +210,7 @@ bool dtClosestHeightPointTriangle(const float* p, const float* a, const float* b
 	dtVsub(v1, b, a);
 	dtVsub(v2, p, a);
 
-	// Compute scaled barycentric coordinates
+	// Compute scaled barycentric coordinates 计算重心坐标
 	float denom = v0[0] * v1[2] - v0[2] * v1[0];
 	if (fabsf(denom) < EPS)
 		return false;

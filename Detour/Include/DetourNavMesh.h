@@ -254,7 +254,7 @@ struct dtMeshHeader
 	int y;					///< The y-position of the tile within the dtNavMesh tile grid. (x, y, layer)
 	int layer;				///< The layer of the tile within the dtNavMesh tile grid. (x, y, layer)
 	unsigned int userId;	///< The user defined id of the tile.
-	int polyCount;			///< The number of polygons in the tile.
+	int polyCount;			///< The number of polygons in the tile. // 记录 tile 中一共有多少个 poly
 	int vertCount;			///< The number of vertices in the tile.
 	int maxLinkCount;		///< The number of allocated links.
 	int detailMeshCount;	///< The number of sub-meshes in the detail mesh.

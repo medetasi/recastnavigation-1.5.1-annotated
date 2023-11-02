@@ -629,7 +629,7 @@ class dtFindNearestPolyQuery : public dtPolyQuery
 	float m_nearestDistanceSqr;
 	dtPolyRef m_nearestRef;
 	float m_nearestPoint[3];
-	bool m_overPoly;
+	bool m_overPoly; // 记录 center 是否在最近的 poly 上
 
 public:
 	dtFindNearestPolyQuery(const dtNavMeshQuery* query, const float* center)
@@ -644,11 +644,14 @@ public:
 	bool isOverPoly() const { return m_overPoly; }
 
 	// 从所有符合条件的 poly 中找到最近的
+	// tile 处理中的 tile 的指针
+	// polys 已经找到的所有 poly 的数组
+	// refs 已经找到的所有符合要求的 poly 的 ref 的数组
 	void process(const dtMeshTile* tile, dtPoly** polys, dtPolyRef* refs, int count)
 	{
 		dtIgnoreUnused(polys); // polys 没用，忽略警告提示
 
-		// 遍历所有 poly，查找最近的
+		// 处理 count 个 poly
 		for (int i = 0; i < count; ++i)
 		{
 			dtPolyRef ref = refs[i];
@@ -657,16 +660,18 @@ public:
 			bool posOverPoly = false;
 			float d;
 
-			// 查询 poly 上离 center 最近的点，判断 center 是否在 poly 上
+			// 计算 center 到 poly 上的投影点
+			// posOverPoly 的意思不是点是否直接在 poly 上，而是 center 在 poly 上的投影是否在 poly 内部
 			m_query->closestPointOnPoly(ref, m_center, closestPtPoly, &posOverPoly);
 
 			// If a point is directly over a polygon and closer than
 			// climb height, favor that instead of straight line nearest point.
 			// 分情况计算实际距离
+			// 如果点在 poly 上的投影在 poly 内部
 			dtVsub(diff, m_center, closestPtPoly);
 			if (posOverPoly)
 			{
-				d = dtAbs(diff[1]) - tile->header->walkableClimb;
+				d = dtAbs(diff[1]) - tile->header->walkableClimb; // 计算 center 到投影点的 y 轴坐标差与可攀爬高度的差值
 				d = d > 0 ? d*d : 0;			
 			}
 			else
@@ -708,6 +713,12 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 // If center and nearestPt point to an equal position, isOverPoly will be true;
 // however there's also a special case of climb height inside the polygon (see dtFindNearestPolyQuery)
 // 查找一个点离它最近的一个 poly
+// center 中心点位置
+// halfExtents 外扩
+// filter 查询的筛选
+// nearestRef 最近的 poly 的 ref
+// nearestPt 找到的最近的合法点
+// isOverPoly 返回 center 是否在找到的最近的 poly 上
 dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfExtents,
 										 const dtQueryFilter* filter,
 										 dtPolyRef* nearestRef, float* nearestPt, bool* isOverPoly) const
@@ -719,7 +730,7 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 
 	// queryPolygons below will check rest of params
 	
-	dtFindNearestPolyQuery query(this, center); // 创建查询的实例对象
+	dtFindNearestPolyQuery query(this, center); // 创建一个查询最近 poly 的 query 对象
 
 	dtStatus status = queryPolygons(center, halfExtents, filter, &query); // 执行 query 对象关联的查询
 	if (dtStatusFailed(status))
@@ -744,11 +755,13 @@ void dtNavMeshQuery::queryPolygonsInTile(const dtMeshTile* tile, const float* qm
 										 const dtQueryFilter* filter, dtPolyQuery* query) const
 {
 	dtAssert(m_nav);
-	static const int batchSize = 32; // 查找 32 次
+	static const int batchSize = 32; // 每一批处理 32 个搜索到的 poly
 	dtPolyRef polyRefs[batchSize];
 	dtPoly* polys[batchSize];
 	int n = 0;
 
+	// 似乎是包围体树的使用开关判断
+	// 根据是否使用包围体树，对 tile 内部的所有 poly 做一次遍历
 	if (tile->bvTree)
 	{
 		const dtBVNode* node = &tile->bvTree[0];
@@ -827,6 +840,7 @@ void dtNavMeshQuery::queryPolygonsInTile(const dtMeshTile* tile, const float* qm
 			if (!filter->passFilter(ref, tile, p))
 				continue;
 			// Calc polygon bounds.
+			// 拿到 poly 的边界点
 			const float* v = &tile->verts[p->verts[0]*3];
 			dtVcopy(bmin, v);
 			dtVcopy(bmax, v);
@@ -947,7 +961,7 @@ dtStatus dtNavMeshQuery::queryPolygons(const float* center, const float* halfExt
 		return DT_FAILURE | DT_INVALID_PARAM;
 	}
 
-	// 通过中心点 center 和偏移值 halfExtents 来计算出了左下点 bmin 和右上点 bmax，通过 bmin 和 bmax 确定了一个范围
+	// 通过中心点 center 和外扩查询半径 halfExtents 来计算出了左下点 bmin 和右上点 bmax，通过 bmin 和 bmax 确定了一个范围
 	// halfExtents 在测试 demo 中是固定值 {2, 4, 2}，实际使用中可能需要考虑这个值的设定
 	// halfExtents 的单位是米
 	// bmin 的值为 {center.x - 2, center.y - 4, center.z - 2}
@@ -957,23 +971,23 @@ dtStatus dtNavMeshQuery::queryPolygons(const float* center, const float* halfExt
 	dtVadd(bmax, center, halfExtents);
 	
 	// Find tiles the query touches.
-	// 计算 bmin 和 bmax 框定的范围对应的 tile 的范围
+	// 计算 bmin 和 bmax 框定的范围对应的 tile 的范围，tile 是个 2D 概念
 	// 如果 halfExtents 设置正常，那么 minx/maxx, miny/maxy 应该大致相等
 	// 理论上来说 halfExtents 应该只用处理极端情况即可，比如在 tile 边缘之类的
 	int minx, miny, maxx, maxy;
-	m_nav->calcTileLoc(bmin, &minx, &miny); // 计算 bmin 在以 tile 划分的坐标中的 x 和 y
-	m_nav->calcTileLoc(bmax, &maxx, &maxy); // 计算 bmax 在以 tile 划分的坐标中的 x 和 y
+	m_nav->calcTileLoc(bmin, &minx, &miny); // 计算 bmin 在将地图以 tile 划分的坐标轴中的 x 和 y
+	m_nav->calcTileLoc(bmax, &maxx, &maxy); // 计算 bmax 在将地图以 tile 划分的坐标轴中的 x 和 y
 
 	static const int MAX_NEIS = 32;
 	const dtMeshTile* neis[MAX_NEIS];
 
 	// 遍历 bmin 到 bmax 之间的每一个 tile 进行查找
-	// 正常情况下这里需要遍历到的 tile 数量应该很少
+	// 如果搜索外扩半径很小的话，这里需要查找的 tile 很少
 	for (int y = miny; y <= maxy; ++y)
 	{
 		for (int x = minx; x <= maxx; ++x)
 		{
-			// 拿到 x/y 位置上的所有 tile
+			// 拿到 x/y 位置上的所有 tile, 因为 tile 是 2D 概念，所以有可能有多层 tile 重叠在一个 2D 坐标点上
 			const int nneis = m_nav->getTilesAt(x, y, neis, MAX_NEIS);
 			for (int j = 0; j < nneis; ++j)
 			{
