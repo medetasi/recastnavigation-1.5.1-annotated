@@ -38,9 +38,11 @@ rcMeshLoaderObj::~rcMeshLoaderObj()
 	delete [] m_normals;
 	delete [] m_tris;
 }
-		
+
+// 添加顶点
 void rcMeshLoaderObj::addVertex(float x, float y, float z, int& cap)
 {
+	// 顶点数量超过了容量，需要重新分配内存
 	if (m_vertCount+1 > cap)
 	{
 		cap = !cap ? 8 : cap*2;
@@ -50,6 +52,7 @@ void rcMeshLoaderObj::addVertex(float x, float y, float z, int& cap)
 		delete [] m_verts;
 		m_verts = nv;
 	}
+	// 将顶点数据添加到 m_verts 中，处理了缩放
 	float* dst = &m_verts[m_vertCount*3];
 	*dst++ = x*m_scale;
 	*dst++ = y*m_scale;
@@ -57,6 +60,7 @@ void rcMeshLoaderObj::addVertex(float x, float y, float z, int& cap)
 	m_vertCount++;
 }
 
+// 添加三角形
 void rcMeshLoaderObj::addTriangle(int a, int b, int c, int& cap)
 {
 	if (m_triCount+1 > cap)
@@ -75,6 +79,7 @@ void rcMeshLoaderObj::addTriangle(int a, int b, int c, int& cap)
 	m_triCount++;
 }
 
+// 解析一行 obj 文件的数据
 static char* parseRow(char* buf, char* bufEnd, char* row, int len)
 {
 	bool start = true;
@@ -185,18 +190,18 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 	// 循环直到所有数据都处理完毕，按照 obj 格式的内容逐行解析
 	while (src < srcEnd)
 	{
-		// Parse one row
+		// Parse one row 解析一行
 		row[0] = '\0';
 		src = parseRow(src, srcEnd, row, sizeof(row)/sizeof(char));
 		// Skip comments
 		if (row[0] == '#') continue;
-		if (row[0] == 'v' && row[1] != 'n' && row[1] != 't')
+		if (row[0] == 'v' && row[1] != 'n' && row[1] != 't') // v 顶点，vn 法线，vt 纹理，这里只处理顶点
 		{
 			// Vertex pos
 			sscanf(row+1, "%f %f %f", &x, &y, &z);
-			addVertex(x, y, z, vcap);
+			addVertex(x, y, z, vcap); // 添加顶点
 		}
-		if (row[0] == 'f')
+		if (row[0] == 'f') // f 面
 		{
 			// Faces
 			nv = parseFace(row+1, face, 32, m_vertCount);
@@ -207,7 +212,7 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 				const int c = face[i];
 				if (a < 0 || a >= m_vertCount || b < 0 || b >= m_vertCount || c < 0 || c >= m_vertCount)
 					continue;
-				addTriangle(a, b, c, tcap);
+				addTriangle(a, b, c, tcap); // 添加三角形
 			}
 		}
 	}
@@ -215,6 +220,7 @@ bool rcMeshLoaderObj::load(const std::string& filename)
 	delete [] buf; // 释放内存
 
 	// Calculate normals.
+	// 法线的方向使用右手定则来确定
 	m_normals = new float[m_triCount*3];
 	for (int i = 0; i < m_triCount*3; i += 3)
 	{

@@ -96,15 +96,36 @@ class InputGeom
 	ConvexVolume m_volumes[MAX_VOLUMES];
 	int m_volumeCount;
 	///@}
-	
+
+	/*
+	 * 加载 obj 格式的几何图形
+	 * @param ctx 上下文，用于输出错误信息
+	 * @param filepath 文件路径
+	 */
 	bool loadMesh(class rcContext* ctx, const std::string& filepath);
+
+	/*
+	 * 加载 gset 格式的几何图形
+	 * @param ctx 上下文，用于输出错误信息
+	 * @param filepath 文件路径
+	 */
 	bool loadGeomSet(class rcContext* ctx, const std::string& filepath);
+	
 public:
 	InputGeom();
 	~InputGeom();
 	
-	
+	/*
+	 * 加载几何图形，支持 obj 和 gset 两种格式
+	 * @param ctx 上下文
+	 * @param filepath 文件路径
+	 */
 	bool load(class rcContext* ctx, const std::string& filepath);
+
+	/*
+	 * 保存几何图形，支持 gset 格式
+	 * @param settings 构建设置
+	 */
 	bool saveGeomSet(const BuildSettings* settings);
 	
 	/// Method to return static mesh data.

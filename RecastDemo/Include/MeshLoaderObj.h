@@ -21,12 +21,18 @@
 
 #include <string>
 
+// 一个 obj 文件的加载器
 class rcMeshLoaderObj
 {
 public:
 	rcMeshLoaderObj();
 	~rcMeshLoaderObj();
-	
+
+	/*
+	 * 从文件中加载数据，读取了顶点和三角形数据，然后计算出了法线数据
+	 * @param[in] fileName 文件名
+	 * @return bool 是否加载成功
+	*/
 	bool load(const std::string& fileName);
 
 	const float* getVerts() const { return m_verts; }
@@ -40,17 +46,34 @@ private:
 	// Explicitly disabled copy constructor and copy assignment operator.
 	rcMeshLoaderObj(const rcMeshLoaderObj&);
 	rcMeshLoaderObj& operator=(const rcMeshLoaderObj&);
-	
+
+	/*
+	 * 增加一个顶点
+	 * @param[in] x 顶点的 x 坐标
+	 * @param[in] y 顶点的 y 坐标
+	 * @param[in] z 顶点的 z 坐标
+	 * @param[out] cap 顶点的容量
+	 * @return void
+	*/
 	void addVertex(float x, float y, float z, int& cap);
+
+	/*
+	 * 增加一个三角形
+	 * @param[in] a 三角形的第一个顶点的索引
+	 * @param[in] b 三角形的第二个顶点的索引
+	 * @param[in] c 三角形的第三个顶点的索引
+	 * @param[out] cap 三角形的容量
+	 * @return void
+	*/
 	void addTriangle(int a, int b, int c, int& cap);
 	
 	std::string m_filename;
-	float m_scale;	
-	float* m_verts;
-	int* m_tris;
-	float* m_normals;
-	int m_vertCount;
-	int m_triCount;
+	float m_scale; // 缩放，只支持一倍的缩放
+	float* m_verts; // 顶点的坐标集合
+	int* m_tris; // 三角形的顶点索引集合
+	float* m_normals; // 法线
+	int m_vertCount; // 顶点数量
+	int m_triCount; // 三角形数量
 };
 
 #endif // MESHLOADER_OBJ

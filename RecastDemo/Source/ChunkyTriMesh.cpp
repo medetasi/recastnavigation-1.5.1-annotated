@@ -23,9 +23,9 @@
 
 struct BoundsItem
 {
-	float bmin[2];
-	float bmax[2];
-	int i;
+	float bmin[2]; // 三角形的最小边界 x 和 z
+	float bmax[2]; // 三角形的最大边界 x 和 z
+	int i; // 三角形的索引
 };
 
 static int compareItemX(const void* va, const void* vb)
@@ -50,6 +50,7 @@ static int compareItemY(const void* va, const void* vb)
 	return 0;
 }
 
+// 计算边界
 static void calcExtends(const BoundsItem* items, const int /*nitems*/,
 						const int imin, const int imax,
 						float* bmin, float* bmax)
@@ -76,18 +77,22 @@ inline int longestAxis(float x, float y)
 	return y > x ? 1 : 0;
 }
 
+// 进行三角形的分块，构建一棵树
+// 本函数会递归调用自己，直到所有三角形都被分块
+// 这里是二维的分块，所以只需要考虑 X 和 Z 轴
 static void subdivide(BoundsItem* items, int nitems, int imin, int imax, int trisPerChunk,
 					  int& curNode, rcChunkyTriMeshNode* nodes, const int maxNodes,
 					  int& curTri, int* outTris, const int* inTris)
 {
-	int inum = imax - imin;
+	int inum = imax - imin; // 本次处理的三角形数
 	int icur = curNode;
 	
 	if (curNode >= maxNodes)
 		return;
 
 	rcChunkyTriMeshNode& node = nodes[curNode++];
-	
+
+	// 如果三角形数小于等于 trisPerChunk，则直接将三角形复制到 outTris 中，不需要再分块
 	if (inum <= trisPerChunk)
 	{
 		// Leaf
@@ -110,8 +115,10 @@ static void subdivide(BoundsItem* items, int nitems, int imin, int imax, int tri
 	else
 	{
 		// Split
+		// 计算当前分块的边界
 		calcExtends(items, nitems, imin, imax, node.bmin, node.bmax);
-		
+
+		// 找到最长的边界
 		int	axis = longestAxis(node.bmax[0] - node.bmin[0],
 							   node.bmax[1] - node.bmin[1]);
 		
@@ -126,7 +133,7 @@ static void subdivide(BoundsItem* items, int nitems, int imin, int imax, int tri
 			qsort(items+imin, static_cast<size_t>(inum), sizeof(BoundsItem), compareItemY);
 		}
 		
-		int isplit = imin+inum/2;
+		int isplit = imin+inum/2; // 划分一半
 		
 		// Left
 		subdivide(items, nitems, imin, isplit, trisPerChunk, curNode, nodes, maxNodes, curTri, outTris, inTris);
@@ -142,12 +149,14 @@ static void subdivide(BoundsItem* items, int nitems, int imin, int imax, int tri
 bool rcCreateChunkyTriMesh(const float* verts, const int* tris, int ntris,
 						   int trisPerChunk, rcChunkyTriMesh* cm)
 {
+	// 计算节点数
 	int nchunks = (ntris + trisPerChunk-1) / trisPerChunk;
 
 	cm->nodes = new rcChunkyTriMeshNode[nchunks*4];
 	if (!cm->nodes)
 		return false;
-		
+
+	// 创建三角形索引数组
 	cm->tris = new int[ntris*3];
 	if (!cm->tris)
 		return false;
@@ -155,6 +164,7 @@ bool rcCreateChunkyTriMesh(const float* verts, const int* tris, int ntris,
 	cm->ntris = ntris;
 
 	// Build tree
+	// 为每个三角形计算 XZ 轴的边界
 	BoundsItem* items = new BoundsItem[ntris];
 	if (!items)
 		return false;
@@ -184,14 +194,14 @@ bool rcCreateChunkyTriMesh(const float* verts, const int* tris, int ntris,
 	
 	delete [] items;
 	
-	cm->nnodes = curNode;
+	cm->nnodes = curNode; // 节点的数量
 	
 	// Calc max tris per node.
 	cm->maxTrisPerChunk = 0;
 	for (int i = 0; i < cm->nnodes; ++i)
 	{
 		rcChunkyTriMeshNode& node = cm->nodes[i];
-		const bool isLeaf = node.i >= 0;
+		const bool isLeaf = node.i >= 0; // 如果不是叶子节点，则 i 为负数
 		if (!isLeaf) continue;
 		if (node.n > cm->maxTrisPerChunk)
 			cm->maxTrisPerChunk = node.n;

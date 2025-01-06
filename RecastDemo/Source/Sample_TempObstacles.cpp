@@ -47,6 +47,7 @@
 #include "RecastAlloc.h"
 #include "RecastAssert.h"
 #include "fastlz.h"
+#include <iostream>
 
 #ifdef WIN32
 #	define snprintf _snprintf
@@ -1183,7 +1184,16 @@ void Sample_TempObstacles::addTempObstacle(const float* pos)
 	float p[3];
 	dtVcopy(p, pos);
 	p[1] -= 0.5f;
-	m_tileCache->addObstacle(p, 1.0f, 2.0f, 0);
+	// m_tileCache->addObstacle(p, 1.0f, 2.0f, 0);
+	std::cout << "add obstacle, pos = " << p[0] << ", " << p[1] << ", " << p[2] << std::endl;
+	float min[] = {-2.0f, 0.0f, -20.0f};
+	float max[] = {2.0f, 20.0f, -22.0f};
+	dtObstacleRef ref;
+	auto ret = m_tileCache->addBoxObstacle(min, max, &ref);
+	if (!dtStatusFailed(ret))
+	{
+		std::cout<<ref<<std::endl;
+	}
 }
 
 void Sample_TempObstacles::removeTempObstacle(const float* sp, const float* sq)

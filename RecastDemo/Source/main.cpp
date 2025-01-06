@@ -236,7 +236,7 @@ int main(int /*argc*/, char** /*argv*/)
 						if (sample)
 							sample->handleStep();
 					}
-					else if (event.key.keysym.sym == SDLK_9)
+					else if (event.key.keysym.sym == SDLK_9) // 数字键 9
 					{
 						if (sample && geom)
 						{
@@ -249,7 +249,7 @@ int main(int /*argc*/, char** /*argv*/)
 
 							sample->collectSettings(settings);
 
-							geom->saveGeomSet(&settings);
+							geom->saveGeomSet(&settings); // 保存当前的设置
 						}
 					}
 					break;

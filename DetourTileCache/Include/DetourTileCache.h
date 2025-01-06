@@ -64,9 +64,9 @@ struct dtTileCacheObstacle
 {
 	union
 	{
-		dtObstacleCylinder cylinder;
-		dtObstacleBox box;
-		dtObstacleOrientedBox orientedBox;
+		dtObstacleCylinder cylinder; // 圆柱体
+		dtObstacleBox box; // 盒子
+		dtObstacleOrientedBox orientedBox; // 有向盒子
 	};
 
 	dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];

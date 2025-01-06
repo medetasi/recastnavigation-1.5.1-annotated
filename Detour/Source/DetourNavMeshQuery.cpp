@@ -750,6 +750,14 @@ dtStatus dtNavMeshQuery::findNearestPoly(const float* center, const float* halfE
 	return DT_SUCCESS;
 }
 
+dtStatus dtNavMeshQuery::findPositionHeight(const float* center, const float* halfExtents, const dtQueryFilter* filter,
+	float* height) const
+{
+	
+
+	return DT_SUCCESS;
+}
+
 // 查询在 tile 中的所有 poly
 void dtNavMeshQuery::queryPolygonsInTile(const dtMeshTile* tile, const float* qmin, const float* qmax,
 										 const dtQueryFilter* filter, dtPolyQuery* query) const

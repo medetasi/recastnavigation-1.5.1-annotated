@@ -338,6 +338,14 @@ public:
 	dtStatus findNearestPoly(const float* center, const float* halfExtents,
 							 const dtQueryFilter* filter,
 							 dtPolyRef* nearestRef, float* nearestPt, bool* isOverPoly) const;
+
+	/// 找到点的 x/z 在导航网格上对应的 y 的值
+	/// @param center 查询的中心点，[(x, y, z)] 其中 y 是参考的 y 值
+	/// @param halfExtents 搜索的外扩半径
+	/// @param filter 针对查询的过滤配置
+	/// @param height 查找到的高度的结果
+	/// @return 本次查询的状态
+	dtStatus findPositionHeight(const float *center, const float *halfExtents, const dtQueryFilter *filter, float *height) const;
 	
 	/// Finds polygons that overlap the search box.
 	///  @param[in]		center		The center of the search box. [(x, y, z)]
