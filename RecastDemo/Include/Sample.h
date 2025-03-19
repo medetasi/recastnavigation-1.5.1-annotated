@@ -67,9 +67,9 @@ public:
 
 enum SamplePartitionType
 {
-	SAMPLE_PARTITION_WATERSHED,
-	SAMPLE_PARTITION_MONOTONE,
-	SAMPLE_PARTITION_LAYERS
+	SAMPLE_PARTITION_WATERSHED, // 分水岭分区算法
+	SAMPLE_PARTITION_MONOTONE, // 单调分区算法
+	SAMPLE_PARTITION_LAYERS // 层级分区算法
 };
 
 struct SampleTool
@@ -96,44 +96,55 @@ struct SampleToolState {
 	virtual void handleUpdate(const float dt) = 0;
 };
 
-// demo 的抽象基类
+// 所有类型 sample 的基类
 class Sample
 {
 protected:
 	class InputGeom* m_geom; // 输入的 mesh
-	class dtNavMesh* m_navMesh;
-	class dtNavMeshQuery* m_navQuery;
-	class dtCrowd* m_crowd;
+	class dtNavMesh* m_navMesh; // 生成的导航网格
+	class dtNavMeshQuery* m_navQuery; // 导航网格查询
+	class dtCrowd* m_crowd; // 人群，似乎是一个群体寻路的功能
 
-	unsigned char m_navMeshDrawFlags;
+	unsigned char m_navMeshDrawFlags; // 导航网格的绘制标志
 
-	float m_cellSize;
-	float m_cellHeight;
-	float m_agentHeight;
-	float m_agentRadius;
-	float m_agentMaxClimb;
-	float m_agentMaxSlope;
-	float m_regionMinSize;
-	float m_regionMergeSize;
-	float m_edgeMaxLen;
-	float m_edgeMaxError;
-	float m_vertsPerPoly;
-	float m_detailSampleDist;
-	float m_detailSampleMaxError;
-	int m_partitionType;
+	float m_cellSize; // 每个 cell 的大小
+	float m_cellHeight; // 每个 cell 的高度
+	float m_agentHeight; // 代理的高度
+	float m_agentRadius; // 代理的半径
+	float m_agentMaxClimb; // 代理的最大爬升高度
+	float m_agentMaxSlope; // 代理的最大坡度
+	float m_regionMinSize; // 区域的最小大小
+	float m_regionMergeSize; // 区域合并的大小
+	float m_edgeMaxLen; // 边的最大长度
+	float m_edgeMaxError; // 边的最大误差
+	float m_vertsPerPoly; // 每个多边形的顶点数
+	float m_detailSampleDist; // 细节采样距离
+	float m_detailSampleMaxError; // 细节采样最大误差
+	int m_partitionType; // 分区类型
 
-	bool m_filterLowHangingObstacles;
-	bool m_filterLedgeSpans;
-	bool m_filterWalkableLowHeightSpans;
+	bool m_filterLowHangingObstacles; // 过滤低悬挂障碍物
+	bool m_filterLedgeSpans; // 过滤边缘跨度
+	bool m_filterWalkableLowHeightSpans; // 过滤可行走的低高度跨度
 	
-	SampleTool* m_tool;
-	SampleToolState* m_toolStates[MAX_TOOLS];
+	SampleTool* m_tool; // 当前选中的工具
+	SampleToolState* m_toolStates[MAX_TOOLS]; // 工具状态
 	
-	BuildContext* m_ctx;
+	BuildContext* m_ctx; // 构建上下文
 
-	SampleDebugDraw m_dd;
+	SampleDebugDraw m_dd; // 调试绘制
 	
+	/*
+	从文件中加载导航网格，solo 和 tile 模式都用这个函数
+	@param path 文件路径
+	@return 加载的导航网格
+	*/
 	dtNavMesh* loadAll(const char* path);
+
+	/*
+	保存导航网格到文件
+	@param path 文件路径
+	@param mesh 导航网格
+	*/
 	void saveAll(const char* path, const dtNavMesh* mesh);
 
 public:

@@ -173,13 +173,13 @@ int main(int /*argc*/, char** /*argv*/)
 	const string meshesFolder = "Meshes";
 	string meshName = "Choose Mesh...";
 	
-	float markerPosition[3] = {0, 0, 0};
-	bool markerPositionSet = false;
+	float markerPosition[3] = {0, 0, 0}; // 标记位置
+	bool markerPositionSet = false; // 标记位置是否设置
 	
 	InputGeom* geom = 0; // 选择的 mesh
-	Sample* sample = 0; // 选择的模式
+	Sample* sample = 0; // 选择的模式对应的 sample 类对象
 
-	const string testCasesFolder = "TestCases";
+	const string testCasesFolder = "TestCases"; // 测试用例文件夹
 	TestCase* test = 0;
 
 	BuildContext ctx;
@@ -209,34 +209,34 @@ int main(int /*argc*/, char** /*argv*/)
 		{
 			switch (event.type)
 			{
-				case SDL_KEYDOWN:
+				case SDL_KEYDOWN: // 键盘按下
 					// Handle any key presses here.
-					if (event.key.keysym.sym == SDLK_ESCAPE)
+					if (event.key.keysym.sym == SDLK_ESCAPE) // 按下 ESC 键，退出程序
 					{
 						done = true;
 					}
-					else if (event.key.keysym.sym == SDLK_t)
+					else if (event.key.keysym.sym == SDLK_t) // 按下 T 键，显示测试用例
 					{
 						showLevels = false;
 						showSample = false;
 						showTestCases = true;
-						scanDirectory(testCasesFolder, ".txt", files);
+						scanDirectory(testCasesFolder, ".txt", files); // 扫描 testCasesFolder 文件夹下的所有 .txt 文件
 					}
-					else if (event.key.keysym.sym == SDLK_TAB)
+					else if (event.key.keysym.sym == SDLK_TAB) // 按下 TAB 键，切换菜单是否显示
 					{
 						showMenu = !showMenu;
 					}
-					else if (event.key.keysym.sym == SDLK_SPACE)
+					else if (event.key.keysym.sym == SDLK_SPACE) // 按下空格键，触发工具的切换
 					{
 						if (sample)
 							sample->handleToggle();
 					}
-					else if (event.key.keysym.sym == SDLK_1)
+					else if (event.key.keysym.sym == SDLK_1) // 按下 1 键，触发单步执行
 					{
 						if (sample)
 							sample->handleStep();
 					}
-					else if (event.key.keysym.sym == SDLK_9) // 数字键 9
+					else if (event.key.keysym.sym == SDLK_9) // 数字键 9，保存当前的设置
 					{
 						if (sample && geom)
 						{
@@ -254,77 +254,77 @@ int main(int /*argc*/, char** /*argv*/)
 					}
 					break;
 				
-				case SDL_MOUSEWHEEL:
+				case SDL_MOUSEWHEEL: // 鼠标滚轮事件
 					if (event.wheel.y < 0)
 					{
 						// wheel down
-						if (mouseOverMenu)
+						if (mouseOverMenu) // 如果鼠标在菜单上
 						{
-							mouseScroll++;
+							mouseScroll++; // 滚动条滚动
 						}
 						else
 						{
-							scrollZoom += 1.0f;
+							scrollZoom += 1.0f; // 如果鼠标不在菜单上，则进行缩放
 						}
 					}
 					else
 					{
 						if (mouseOverMenu)
 						{
-							mouseScroll--;
+							mouseScroll--; // 滚动条滚动
 						}
 						else
 						{
-							scrollZoom -= 1.0f;
+							scrollZoom -= 1.0f; // 进行缩放
 						}
 					}
 					break;
-				case SDL_MOUSEBUTTONDOWN:
-					if (event.button.button == SDL_BUTTON_RIGHT)
+				case SDL_MOUSEBUTTONDOWN: // 鼠标按下事件
+					if (event.button.button == SDL_BUTTON_RIGHT) // 由右键触发
 					{
-						if (!mouseOverMenu)
+						if (!mouseOverMenu) // 如果鼠标不在菜单上
 						{
 							// Rotate view
-							rotate = true;
-							movedDuringRotate = false;
-							origMousePos[0] = mousePos[0];
+							rotate = true; // 旋转视角
+							movedDuringRotate = false; // 移动标志
+							origMousePos[0] = mousePos[0]; // 记录鼠标位置
 							origMousePos[1] = mousePos[1];
-							origCameraEulers[0] = cameraEulers[0];
+							origCameraEulers[0] = cameraEulers[0]; // 记录视角
 							origCameraEulers[1] = cameraEulers[1];
 						}
 					}
 					break;
 					
-				case SDL_MOUSEBUTTONUP:
+				case SDL_MOUSEBUTTONUP: // 鼠标松开事件
 					// Handle mouse clicks here.
-					if (event.button.button == SDL_BUTTON_RIGHT)
+					if (event.button.button == SDL_BUTTON_RIGHT) // 由右键触发
 					{
-						rotate = false;
+						rotate = false; // 停止旋转
 						if (!mouseOverMenu)
 						{
 							if (!movedDuringRotate)
 							{
-								processHitTest = true;
+								processHitTest = true; // 进行射线检测
 								processHitTestShift = true;
 							}
 						}
 					}
-					else if (event.button.button == SDL_BUTTON_LEFT)
+					else if (event.button.button == SDL_BUTTON_LEFT) // 由左键触发
 					{
 						if (!mouseOverMenu)
 						{
 							processHitTest = true;
-							processHitTestShift = (SDL_GetModState() & KMOD_SHIFT) ? true : false;
+							processHitTestShift = (SDL_GetModState() & KMOD_SHIFT) ? true : false; // 按下 shift 键，进行 shift 操作
 						}
 					}
 					
 					break;
 					
-				case SDL_MOUSEMOTION:
-					mousePos[0] = event.motion.x;
-					mousePos[1] = height-1 - event.motion.y;
+				case SDL_MOUSEMOTION: // 鼠标移动事件
+					mousePos[0] = event.motion.x; // 鼠标 x 坐标
+					mousePos[1] = height-1 - event.motion.y; // 鼠标 y 坐标
 					
-					if (rotate)
+					if (rotate) // 如果正在旋转
 					{
 						int dx = mousePos[0] - origMousePos[0];
 						int dy = mousePos[1] - origMousePos[1];
@@ -353,7 +353,7 @@ int main(int /*argc*/, char** /*argv*/)
 			mouseButtonMask |= IMGUI_MBUT_RIGHT;
 		
 		Uint32 time = SDL_GetTicks();
-		float dt = (time - prevFrameTime) / 1000.0f;
+		float dt = (time - prevFrameTime) / 1000.0f; // 计算时间差
 		prevFrameTime = time;
 
 		// Hit test mesh.
@@ -364,29 +364,29 @@ int main(int /*argc*/, char** /*argv*/)
 			
 			if (hit)
 			{
-				if (SDL_GetModState() & KMOD_CTRL)
+				if (SDL_GetModState() & KMOD_CTRL) // 按下 ctrl 键
 				{
 					// Marker
-					markerPositionSet = true;
-					markerPosition[0] = rayStart[0] + (rayEnd[0] - rayStart[0]) * hitTime;
+					markerPositionSet = true; // 设置标记位置
+					markerPosition[0] = rayStart[0] + (rayEnd[0] - rayStart[0]) * hitTime; // 计算标记位置
 					markerPosition[1] = rayStart[1] + (rayEnd[1] - rayStart[1]) * hitTime;
 					markerPosition[2] = rayStart[2] + (rayEnd[2] - rayStart[2]) * hitTime;
 				}
 				else
 				{
 					float pos[3];
-					pos[0] = rayStart[0] + (rayEnd[0] - rayStart[0]) * hitTime;
+					pos[0] = rayStart[0] + (rayEnd[0] - rayStart[0]) * hitTime; // 计算点击位置
 					pos[1] = rayStart[1] + (rayEnd[1] - rayStart[1]) * hitTime;
 					pos[2] = rayStart[2] + (rayEnd[2] - rayStart[2]) * hitTime;
-					sample->handleClick(rayStart, pos, processHitTestShift);
+					sample->handleClick(rayStart, pos, processHitTestShift); // 处理点击事件
 				}
 			}
 			else
 			{
-				if (SDL_GetModState() & KMOD_CTRL)
+				if (SDL_GetModState() & KMOD_CTRL) // 按下 ctrl 键
 				{
 					// Marker
-					markerPositionSet = false;
+					markerPositionSet = false; // 取消标记位置
 				}
 			}
 		}
@@ -394,7 +394,7 @@ int main(int /*argc*/, char** /*argv*/)
 		// Update sample simulation.
 		const float SIM_RATE = 20;
 		const float DELTA_TIME = 1.0f / SIM_RATE;
-		timeAcc = rcClamp(timeAcc + dt, -1.0f, 1.0f);
+		timeAcc = rcClamp(timeAcc + dt, -1.0f, 1.0f); // 限制时间差
 		int simIter = 0;
 		while (timeAcc > DELTA_TIME)
 		{
@@ -406,21 +406,21 @@ int main(int /*argc*/, char** /*argv*/)
 			simIter++;
 		}
 
-		// Clamp the framerate so that we do not hog all the CPU.
+		// Clamp the framerate so that we do not hog all the CPU. 限制帧率，防止 CPU 占用过高
 		const float MIN_FRAME_TIME = 1.0f / 40.0f;
 		if (dt < MIN_FRAME_TIME)
 		{
 			int ms = (int)((MIN_FRAME_TIME - dt) * 1000.0f);
 			if (ms > 10) ms = 10;
-			if (ms >= 0) SDL_Delay(ms);
+			if (ms >= 0) SDL_Delay(ms); // 延迟 ms 毫秒
 		}
 		
-		// Set the viewport.
+		// Set the viewport. 设置视口
 		glViewport(0, 0, width, height);
 		GLint viewport[4];
 		glGetIntegerv(GL_VIEWPORT, viewport);
 		
-		// Clear the screen
+		// Clear the screen 清除屏幕
 		glClearColor(0.3f, 0.3f, 0.32f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_BLEND);
@@ -428,23 +428,23 @@ int main(int /*argc*/, char** /*argv*/)
 		glDisable(GL_TEXTURE_2D);
 		glEnable(GL_DEPTH_TEST);
 		
-		// Compute the projection matrix.
+		// Compute the projection matrix. 计算投影矩阵
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		gluPerspective(50.0f, (float)width/(float)height, 1.0f, camr);
 		GLdouble projectionMatrix[16];
-		glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
+		glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix); // 获取投影矩阵
 		
-		// Compute the modelview matrix.
+		// Compute the modelview matrix. 计算模型视图矩阵
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		glRotatef(cameraEulers[0], 1, 0, 0);
 		glRotatef(cameraEulers[1], 0, 1, 0);
 		glTranslatef(-cameraPos[0], -cameraPos[1], -cameraPos[2]);
 		GLdouble modelviewMatrix[16];
-		glGetDoublev(GL_MODELVIEW_MATRIX, modelviewMatrix);
+		glGetDoublev(GL_MODELVIEW_MATRIX, modelviewMatrix); // 获取模型视图矩阵
 		
-		// Get hit ray position and direction.
+		// Get hit ray position and direction. 获取射线起点和方向
 		GLdouble x, y, z;
 		gluUnProject(mousePos[0], mousePos[1], 0.0f, modelviewMatrix, projectionMatrix, viewport, &x, &y, &z);
 		rayStart[0] = (float)x;
@@ -455,7 +455,7 @@ int main(int /*argc*/, char** /*argv*/)
 		rayEnd[1] = (float)y;
 		rayEnd[2] = (float)z;
 		
-		// Handle keyboard movement.
+		// Handle keyboard movement. 处理键盘移动
 		const Uint8* keystate = SDL_GetKeyboardState(NULL);
 		moveFront	= rcClamp(moveFront	+ dt * 4 * ((keystate[SDL_SCANCODE_W] || keystate[SDL_SCANCODE_UP		]) ? 1 : -1), 0.0f, 1.0f);
 		moveLeft	= rcClamp(moveLeft	+ dt * 4 * ((keystate[SDL_SCANCODE_A] || keystate[SDL_SCANCODE_LEFT		]) ? 1 : -1), 0.0f, 1.0f);
@@ -575,13 +575,13 @@ int main(int /*argc*/, char** /*argv*/)
 			}
 			imguiSeparator();
 
-			if (geom && sample)
+			if (geom && sample) // 如果 mesh 和 sample 都存在，也就是模式选好了，mesh 文件也选好了
 			{
 				imguiSeparatorLine();
 				
 				sample->handleSettings();
 
-				if (imguiButton("Build"))
+				if (imguiButton("Build")) // 点击 build 按钮
 				{
 					ctx.resetLog();
 					if (!sample->handleBuild()) // 编译 mesh 文件
@@ -896,9 +896,9 @@ int main(int /*argc*/, char** /*argv*/)
 		
 		// Marker
 		if (markerPositionSet && gluProject((GLdouble)markerPosition[0], (GLdouble)markerPosition[1], (GLdouble)markerPosition[2],
-								  modelviewMatrix, projectionMatrix, viewport, &x, &y, &z))
+								  modelviewMatrix, projectionMatrix, viewport, &x, &y, &z)) // 将标记位置转换为屏幕坐标
 		{
-			// Draw marker circle
+			// Draw marker circle 绘制标记圆
 			glLineWidth(5.0f);
 			glColor4ub(240,220,0,196);
 			glBegin(GL_LINE_LOOP);

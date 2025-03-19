@@ -61,6 +61,7 @@ static void calcExtends(const BoundsItem* items, const int /*nitems*/,
 	bmax[0] = items[imin].bmax[0];
 	bmax[1] = items[imin].bmax[1];
 	
+	// 遍历三角形，更新边界
 	for (int i = imin+1; i < imax; ++i)
 	{
 		const BoundsItem& it = items[i];

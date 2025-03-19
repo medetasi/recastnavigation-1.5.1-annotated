@@ -21,7 +21,7 @@
 
 #include <string>
 
-// 一个 obj 文件的加载器
+// obj 文件加载器
 class rcMeshLoaderObj
 {
 public:
@@ -29,7 +29,7 @@ public:
 	~rcMeshLoaderObj();
 
 	/*
-	 * 从文件中加载数据，读取了顶点和三角形数据，然后计算出了法线数据
+	 * 从一个 obj 文件中加载 mesh 数据，读取了顶点和三角形数据，然后计算出了法线数据
 	 * @param[in] fileName 文件名
 	 * @return bool 是否加载成功
 	*/

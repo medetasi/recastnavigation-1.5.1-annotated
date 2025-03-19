@@ -18,8 +18,8 @@ workspace "recastnavigation"
 	exceptionhandling "Off"
 	rtti "Off"
 	symbols "On"
-	flags { "FatalCompileWarnings" }
-	cppdialect "C++98"
+	--flags { "FatalCompileWarnings" }
+	cppdialect "C++20"
 
 	-- debug configs
 	filter "configurations:Debug"

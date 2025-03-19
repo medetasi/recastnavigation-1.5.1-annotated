@@ -290,6 +290,8 @@ static const int RC_SPAN_MAX_HEIGHT = (1 << RC_SPAN_HEIGHT_BITS) - 1;
 static const int RC_SPANS_PER_POOL = 2048;
 
 /// Represents a span in a heightfield.
+/// span 是个链表结构，每个 span 保存了 span 的上下限，以及 area id
+/// 链表是从下往上生长的，y 轴从低到高
 /// @see rcHeightfield
 struct rcSpan
 {
@@ -308,6 +310,7 @@ struct rcSpanPool
 };
 
 /// A dynamic heightfield representing obstructed space.
+/// 初始实体高度场
 /// @ingroup recast
 struct rcHeightfield
 {
@@ -320,9 +323,9 @@ struct rcHeightfield
 	float bmax[3];		///< The maximum bounds in world space. [(x, y, z)]
 	float cs;			///< The size of each cell. (On the xz-plane.)
 	float ch;			///< The height of each cell. (The minimum increment along the y-axis.)
-	rcSpan** spans;		///< Heightfield of spans (width*height).
-	rcSpanPool* pools;	///< Linked list of span pools.
-	rcSpan* freelist;	///< The next free span.
+	rcSpan** spans;		///< Heightfield of spans (width*height). 数组形式保存了所有的 span，key 是索引，每个元素是一个指向 rcSpan 的指针，它是一个链表，包含了本索引所在格子上所有的 span
+	rcSpanPool* pools;	///< Linked list of span pools. 所有分配的 span 池，使用一个链表来管理，主要用来做析构的内存释放
+	rcSpan* freelist;	///< The next free span. 所有未使用的 span，已分配的未使用的 span 会加入到这个链表中
 
 private:
 	// Explicitly-disabled copy constructor and copy assignment operator.
@@ -331,22 +334,27 @@ private:
 };
 
 /// Provides information on the content of a cell column in a compact heightfield. 
+/// 记录了从 spans 数组的 index 位置开始，有 count 个可行走的 span
+/// @see rcCompactHeightfield
 struct rcCompactCell
 {
-	unsigned int index : 24;	///< Index to the first span in the column.
-	unsigned int count : 8;		///< Number of spans in the column.
+	unsigned int index : 24;	///< Index to the first span in the column. 从 spans 数组中的哪个位置开始
+	unsigned int count : 8;		///< Number of spans in the column. 可行走的 span 数量
 };
 
 /// Represents a span of unobstructed space within a compact heightfield.
+/// 紧凑高度场中的一个 span，表示一个可行走的区域
+/// @see rcCompactHeightfield
 struct rcCompactSpan
 {
 	unsigned short y;			///< The lower extent of the span. (Measured from the heightfield's base.)
 	unsigned short reg;			///< The id of the region the span belongs to. (Or zero if not in a region.)
-	unsigned int con : 24;		///< Packed neighbor connection data.
+	unsigned int con : 24;		///< Packed neighbor connection data. 周围邻居的联通性，只有轴邻居，使用的时候会被分成 4 个 6 bit 的段使用
 	unsigned int h : 8;			///< The height of the span.  (Measured from #y.)
 };
 
 /// A compact, static heightfield representing unobstructed space.
+/// 紧凑高度场，只保留了可行走的区域
 /// @ingroup recast
 struct rcCompactHeightfield
 {
@@ -359,16 +367,16 @@ struct rcCompactHeightfield
 	int walkableHeight;			///< The walkable height used during the build of the field.  (See: rcConfig::walkableHeight)
 	int walkableClimb;			///< The walkable climb used during the build of the field. (See: rcConfig::walkableClimb)
 	int borderSize;				///< The AABB border size used during the build of the field. (See: rcConfig::borderSize)
-	unsigned short maxDistance;	///< The maximum distance value of any span within the field. 
+	unsigned short maxDistance;	///< The maximum distance value of any span within the field. 在生成距离场时，计算出最大距离，保存在该值中
 	unsigned short maxRegions;	///< The maximum region id of any span within the field. 
 	float bmin[3];				///< The minimum bounds in world space. [(x, y, z)]
 	float bmax[3];				///< The maximum bounds in world space. [(x, y, z)]
 	float cs;					///< The size of each cell. (On the xz-plane.)
 	float ch;					///< The height of each cell. (The minimum increment along the y-axis.)
 	rcCompactCell* cells;		///< Array of cells. [Size: #width*#height]
-	rcCompactSpan* spans;		///< Array of spans. [Size: #spanCount]
-	unsigned short* dist;		///< Array containing border distance data. [Size: #spanCount]
-	unsigned char* areas;		///< Array containing area id data. [Size: #spanCount]
+	rcCompactSpan* spans;		///< Array of spans. [Size: #spanCount] 保存了所有可行走的 span, 索引在 cells 中保存
+	unsigned short* dist;		///< Array containing border distance data. [Size: #spanCount] 距离场 "border span" 是指少于 8 个邻居的 span
+	unsigned char* areas;		///< Array containing area id data. [Size: #spanCount] 每个可行走的 span 的 area id
 	
 private:
 	// Explicitly-disabled copy constructor and copy assignment operator.

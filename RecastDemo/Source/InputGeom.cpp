@@ -140,7 +140,7 @@ bool InputGeom::loadMesh(rcContext* ctx, const std::string& filepath)
 		ctx->log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.");
 		return false;
 	}
-	if (!m_mesh->load(filepath))
+	if (!m_mesh->load(filepath)) // 从 obj 文件中加载 mesh 数据
 	{
 		ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not load '%s'", filepath.c_str());
 		return false;
@@ -155,7 +155,7 @@ bool InputGeom::loadMesh(rcContext* ctx, const std::string& filepath)
 		ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Out of memory 'm_chunkyMesh'.");
 		return false;
 	}
-	// 创建 chunky mesh, 构建 AABB 树
+	// 根据加载好的 mesh 数据，创建分块，构建 AABB 树
 	if (!rcCreateChunkyTriMesh(m_mesh->getVerts(), m_mesh->getTris(), m_mesh->getTriCount(), 256, m_chunkyMesh))
 	{
 		ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Failed to build chunky mesh.");
@@ -301,12 +301,12 @@ bool InputGeom::loadGeomSet(rcContext* ctx, const std::string& filepath)
 
 bool InputGeom::load(rcContext* ctx, const std::string& filepath)
 {
-	size_t extensionPos = filepath.find_last_of('.');
-	if (extensionPos == std::string::npos)
+	size_t extensionPos = filepath.find_last_of('.'); // 找到文件路径中最后一个点号的位置
+	if (extensionPos == std::string::npos) // 如果找不到点号，返回 false
 		return false;
-
-	std::string extension = filepath.substr(extensionPos);
-	std::transform(extension.begin(), extension.end(), extension.begin(), tolower);
+	
+	std::string extension = filepath.substr(extensionPos); // 获取文件扩展名
+	std::transform(extension.begin(), extension.end(), extension.begin(), tolower); // 将扩展名转换为小写
 
 	if (extension == ".gset")
 		return loadGeomSet(ctx, filepath);
@@ -328,11 +328,11 @@ bool InputGeom::saveGeomSet(const BuildSettings* settings)
 
 	filepath += ".gset";
 
-	FILE* fp = fopen(filepath.c_str(), "w");
+	FILE* fp = fopen(filepath.c_str(), "w"); // 打开文件，用于写入
 	if (!fp) return false;
 	
 	// Store mesh filename.
-	fprintf(fp, "f %s\n", m_mesh->getFileName().c_str());
+	fprintf(fp, "f %s\n", m_mesh->getFileName().c_str()); // 写入 mesh 文件名
 
 	// Store settings if any
 	if (settings)
@@ -375,6 +375,7 @@ bool InputGeom::saveGeomSet(const BuildSettings* settings)
 	}
 
 	// Convex volumes
+	// 遍历每个凸多面体
 	for (int i = 0; i < m_volumeCount; ++i)
 	{
 		ConvexVolume* vol = &m_volumes[i];
@@ -388,6 +389,7 @@ bool InputGeom::saveGeomSet(const BuildSettings* settings)
 	return true;
 }
 
+// 判断从 sp 到 sq 的线段是否与 AABB 相交
 static bool isectSegAABB(const float* sp, const float* sq,
 						 const float* amin, const float* amax,
 						 float& tmin, float& tmax)
@@ -436,20 +438,20 @@ bool InputGeom::raycastMesh(float* src, float* dst, float& tmin)
 	q[0] = src[0] + (dst[0]-src[0])*btmax;
 	q[1] = src[2] + (dst[2]-src[2])*btmax;
 	
-	int cid[512];
-	const int ncid = rcGetChunksOverlappingSegment(m_chunkyMesh, p, q, cid, 512);
+	int cid[512]; // 分块索引数组
+	const int ncid = rcGetChunksOverlappingSegment(m_chunkyMesh, p, q, cid, 512); // 获取与线段 p 到 q 相交的分块索引，ncid 为分块数量
 	if (!ncid)
 		return false;
 	
 	tmin = 1.0f;
 	bool hit = false;
-	const float* verts = m_mesh->getVerts();
+	const float* verts = m_mesh->getVerts(); // 获取网格顶点
 	
 	for (int i = 0; i < ncid; ++i)
 	{
-		const rcChunkyTriMeshNode& node = m_chunkyMesh->nodes[cid[i]];
-		const int* tris = &m_chunkyMesh->tris[node.i*3];
-		const int ntris = node.n;
+		const rcChunkyTriMeshNode& node = m_chunkyMesh->nodes[cid[i]]; // 获取分块节点
+		const int* tris = &m_chunkyMesh->tris[node.i*3]; // 获取三角形索引
+		const int ntris = node.n; // 获取三角形数量
 
 		for (int j = 0; j < ntris*3; j += 3)
 		{

@@ -388,21 +388,9 @@ bool Sample_SoloMesh::handleBuild()
 	const float* bmax = m_geom->getNavMeshBoundsMax(); // 边界的最大值
 	const float* verts = m_geom->getMesh()->getVerts(); // 多边形中所有顶点的坐标数组
 	const int nverts = m_geom->getMesh()->getVertCount(); // verts 中的点的个数，每个点三个数字
-	// for (int i = 0, j = 0; i < nverts; ++i, j += 3)
-	// {
-	// 	cout << "vert: " << i << " {" << verts[j] << ", " << verts[j + 1] << ", " << verts[j + 2] << "} " << endl;
-	// }
-	// cout << endl;
-	
 	const int* tris = m_geom->getMesh()->getTris(); // 三角形的每个点在顶点坐标数组中的下标，每个三角形是一项，合起来是一个数组
 	const int ntris = m_geom->getMesh()->getTriCount(); // tris 的长度
-	// for (int i = 0; i < ntris; ++i)
-	// {
-	// 	const int tri_index = tris[i];
-	// 	cout << "tri_point: " << i << " {" << verts[tri_index * 3] << ", " << verts[tri_index * 3 + 1] << ", " << verts[tri_index * 3 + 2] << "} " << endl;
-	// }
-	// cout << endl;
-	
+
 	//
 	// Step 1. Initialize build config.
 	// Step 1. 初始化 build 参数
@@ -432,7 +420,7 @@ bool Sample_SoloMesh::handleBuild()
 	rcVcopy(m_cfg.bmin, bmin);
 	rcVcopy(m_cfg.bmax, bmax);
 
-	// 通过 bmin/bmax/cs 来计算格子数，bmin/bmax/cs 的单位是米，width/height 的单位是格子
+	// 通过 bmin/bmax/cs 来计算以格子为单位的宽度和高度，bmin/bmax/cs 的单位是米，width/height 的单位是格子
 	rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cfg.cs, &m_cfg.width, &m_cfg.height);
 
 	// Reset build times gathering.
@@ -440,7 +428,7 @@ bool Sample_SoloMesh::handleBuild()
 	m_ctx->resetTimers();
 
 	// Start the build process.
-	// 开始及时
+	// 开始计时
 	m_ctx->startTimer(RC_TIMER_TOTAL);
 	
 	m_ctx->log(RC_LOG_PROGRESS, "Building navigation:");
@@ -461,7 +449,7 @@ bool Sample_SoloMesh::handleBuild()
 		return false;
 	}
 
-	// 初始化分配好的 m_solid 实体高度场
+	// 初始化分配好的 m_solid 实体高度场，主要是将配置参数赋值给 m_solid 中的成员变量
 	if (!rcCreateHeightfield(m_ctx, *m_solid, m_cfg.width, m_cfg.height, m_cfg.bmin, m_cfg.bmax, m_cfg.cs, m_cfg.ch))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
@@ -471,7 +459,7 @@ bool Sample_SoloMesh::handleBuild()
 	// Allocate array that can hold triangle area types.
 	// If you have multiple meshes you need to process, allocate
 	// and array which can hold the max number of triangles you need to process.
-	m_triareas = new unsigned char[ntris]; // 分配一个数组，用来保存三角形的区域类型，每个三角形的类型长度为一个字节
+	m_triareas = new unsigned char[ntris]; // 分配一个数组，用来保存三角形的区域类型，每个三角形的类型长度为一个字节，是否可行走就是保存在这里
 	if (!m_triareas)
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'm_triareas' (%d).", ntris);
@@ -481,10 +469,11 @@ bool Sample_SoloMesh::handleBuild()
 	// Find triangles which are walkable based on their slope and rasterize them.
 	// If your input data is multiple meshes, you can transform them here, calculate
 	// the are type for each of the meshes and rasterize them.
+	// 根据配置的 agent 的可攀爬角度，标记三角形的可行走区域，标记的结果保存在 m_triareas 中，如果可行走，区域会被标记为 RC_WALKABLE_AREA
 	memset(m_triareas, 0, ntris*sizeof(unsigned char));
-	rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas); // 标记三角形的可行走区域
+	rcMarkWalkableTriangles(m_ctx, m_cfg.walkableSlopeAngle, verts, nverts, tris, ntris, m_triareas);
 
-	// 处理三角形攀爬区域
+	// 将三角形 mesh 体素化到实体高度场中
 	if (!rcRasterizeTriangles(m_ctx, verts, nverts, tris, m_triareas, ntris, *m_solid, m_cfg.walkableClimb))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not rasterize triangles.");
@@ -508,27 +497,28 @@ bool Sample_SoloMesh::handleBuild()
 	// 过滤掉不合适的体素化网格
 	// 以下为 RecastDemo filter 选项中的三个
 	if (m_filterLowHangingObstacles)
-		rcFilterLowHangingWalkableObstacles(m_ctx, m_cfg.walkableClimb, *m_solid);
+		rcFilterLowHangingWalkableObstacles(m_ctx, m_cfg.walkableClimb, *m_solid); // 将低悬障碍物设为可走
 	if (m_filterLedgeSpans)
-		rcFilterLedgeSpans(m_ctx, m_cfg.walkableHeight, m_cfg.walkableClimb, *m_solid);
+		rcFilterLedgeSpans(m_ctx, m_cfg.walkableHeight, m_cfg.walkableClimb, *m_solid); // 将处于边缘的 span 过滤掉，周围都不相邻的那种
 	if (m_filterWalkableLowHeightSpans)
-		rcFilterWalkableLowHeightSpans(m_ctx, m_cfg.walkableHeight, *m_solid);
+		rcFilterWalkableLowHeightSpans(m_ctx, m_cfg.walkableHeight, *m_solid); // 过滤掉可用高度小于 walkableHeight 的 span
 
 
 	//
 	// Step 4. Partition walkable surface to simple regions.
-	// Step 4. 划分可走表面为简单区域（ Partition walkable surface to simple regions）：检测实体高度场的顶部表面，并将其划分为由相邻span组成的区域
+	// Step 4. 将可走表面划分为简单区域
 	//
 
 	// Compact the heightfield so that it is faster to handle from now on.
 	// This will result more cache coherent data as well as the neighbours
 	// between walkable cells will be calculated.
-	m_chf = rcAllocCompactHeightfield();
+	m_chf = rcAllocCompactHeightfield(); // 创建紧凑高度场
 	if (!m_chf)
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'chf'.");
 		return false;
 	}
+	// 将实体高度场转换为紧凑高度场，也叫 open heightfield, 结果保存在 m_chf 中
 	if (!rcBuildCompactHeightfield(m_ctx, m_cfg.walkableHeight, m_cfg.walkableClimb, *m_solid, *m_chf))
 	{
 		m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
@@ -559,30 +549,31 @@ bool Sample_SoloMesh::handleBuild()
 	// 1) Watershed partitioning
 	//   - the classic Recast partitioning
 	//   - creates the nicest tessellation
-	//   - usually slowest
+	//   - usually slowest 生成速度最慢
 	//   - partitions the heightfield into nice regions without holes or overlaps
 	//   - the are some corner cases where this method creates produces holes and overlaps
 	//      - holes may appear when a small obstacles is close to large open area (triangulation can handle this)
 	//      - overlaps may occur if you have narrow spiral corridors (i.e stairs), this make triangulation to fail
-	//   * generally the best choice if you precompute the nacmesh, use this if you have large open areas
+	//   * generally the best choice if you precompute the navmesh, use this if you have large open areas 如果想要预先计算 navmesh 且有较大的开放区域，使用这个算法
 	// 2) Monotone partioning
-	//   - fastest
+	//   - fastest 生成速度最快
 	//   - partitions the heightfield into regions without holes and overlaps (guaranteed)
 	//   - creates long thin polygons, which sometimes causes paths with detours
-	//   * use this if you want fast navmesh generation
+	//   * use this if you want fast navmesh generation 如果想要快速生成 navmesh，使用这个算法
 	// 3) Layer partitoining
-	//   - quite fast
+	//   - quite fast 生成速度较快
 	//   - partitions the heighfield into non-overlapping regions
 	//   - relies on the triangulation code to cope with holes (thus slower than monotone partitioning)
 	//   - produces better triangles than monotone partitioning
 	//   - does not have the corner cases of watershed partitioning
 	//   - can be slow and create a bit ugly tessellation (still better than monotone)
 	//     if you have large open areas with small obstacles (not a problem if you use tiles)
-	//   * good choice to use for tiled navmesh with medium and small sized tiles
+	//   * good choice to use for tiled navmesh with medium and small sized tiles 如果想要使用分块的 navmesh，且每个块的大小为中等或较小，使用这个算法
 	
 	if (m_partitionType == SAMPLE_PARTITION_WATERSHED)
 	{
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
+		// 生成距离场，用于后续的区域划分
 		if (!rcBuildDistanceField(m_ctx, *m_chf))
 		{
 			m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build distance field.");

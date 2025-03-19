@@ -46,7 +46,7 @@ private:
 
 /// Creates partitioned triangle mesh (AABB tree),
 /// where each node contains at max trisPerChunk triangles.
-/// 生成 AABB 树，每个节点包含最多 trisPerChunk 个三角形
+/// 生成 AABB 树，每个节点包含最多 trisPerChunk 个三角形，它是一棵 2D 的树，提供平面上的快速查找
 bool rcCreateChunkyTriMesh(const float* verts, const int* tris, int ntris,
 						   int trisPerChunk, rcChunkyTriMesh* cm);
 

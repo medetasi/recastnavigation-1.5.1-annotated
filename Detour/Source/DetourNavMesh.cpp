@@ -137,10 +137,11 @@ inline void freeLink(dtMeshTile* tile, unsigned int link)
 
 dtNavMesh* dtAllocNavMesh()
 {
-	void* mem = dtAlloc(sizeof(dtNavMesh), DT_ALLOC_PERM);
+	// placement new 在已分配的内存上构造对象，这样的好处是可以指定内存分配函数，很灵活
+	void* mem = dtAlloc(sizeof(dtNavMesh), DT_ALLOC_PERM); // 分配 dtNavMesh 对象，DT_ALLOC_PERM 表示函数执行完毕后，内存不会被释放
 	if (!mem)
 		return 0;
-	return new(mem) dtNavMesh;
+	return new(mem) dtNavMesh; // 在 mem 上分配 dtNavMesh 对象
 }
 
 /// @par

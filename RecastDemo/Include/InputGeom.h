@@ -99,15 +99,15 @@ class InputGeom
 
 	/*
 	 * 加载 obj 格式的几何图形
-	 * @param ctx 上下文，用于输出错误信息
-	 * @param filepath 文件路径
+	 * @param[in] ctx 上下文，用于输出错误信息
+	 * @param[in] filepath 文件路径
 	 */
 	bool loadMesh(class rcContext* ctx, const std::string& filepath);
 
 	/*
 	 * 加载 gset 格式的几何图形
-	 * @param ctx 上下文，用于输出错误信息
-	 * @param filepath 文件路径
+	 * @param[in] ctx 上下文，用于输出错误信息
+	 * @param[in] filepath 文件路径
 	 */
 	bool loadGeomSet(class rcContext* ctx, const std::string& filepath);
 	
@@ -117,14 +117,14 @@ public:
 	
 	/*
 	 * 加载几何图形，支持 obj 和 gset 两种格式
-	 * @param ctx 上下文
-	 * @param filepath 文件路径
+	 * @param[in] ctx 上下文
+	 * @param[in] filepath 文件路径
 	 */
 	bool load(class rcContext* ctx, const std::string& filepath);
 
 	/*
 	 * 保存几何图形，支持 gset 格式
-	 * @param settings 构建设置
+	 * @param[in] settings 构建设置
 	 */
 	bool saveGeomSet(const BuildSettings* settings);
 	
@@ -136,6 +136,14 @@ public:
 	const float* getNavMeshBoundsMax() const { return m_hasBuildSettings ? m_buildSettings.navMeshBMax : m_meshBMax; }
 	const rcChunkyTriMesh* getChunkyMesh() const { return m_chunkyMesh; }
 	const BuildSettings* getBuildSettings() const { return m_hasBuildSettings ? &m_buildSettings : 0; }
+
+	/*
+	 * 射线检测，返回线段与网格的交点
+	 * @param[in] src 线段起点
+	 * @param[in] dst 线段终点
+	 * @param[out] tmin 交点距离起点距离
+	 * @return 是否相交
+	 */
 	bool raycastMesh(float* src, float* dst, float& tmin);
 
 	/// @name Off-Mesh connections.
@@ -153,7 +161,7 @@ public:
 	void drawOffMeshConnections(struct duDebugDraw* dd, bool hilight = false);
 	///@}
 
-	/// @name Box Volumes.
+	/// @name Box Volumes. 凸多面体，可以通过工具面板添加
 	///@{
 	int getConvexVolumeCount() const { return m_volumeCount; }
 	const ConvexVolume* getConvexVolumes() const { return m_volumes; }

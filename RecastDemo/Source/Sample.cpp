@@ -335,12 +335,13 @@ void Sample::renderOverlayToolStates(double* proj, double* model, int* view)
 static const int NAVMESHSET_MAGIC = 'M'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'MSET';
 static const int NAVMESHSET_VERSION = 1;
 
+// 导航网格文件头
 struct NavMeshSetHeader
 {
-	int magic;
-	int version;
-	int numTiles;
-	dtNavMeshParams params;
+	int magic; // 魔数
+	int version; // 版本
+	int numTiles; // 瓦片数量
+	dtNavMeshParams params; // 导航网格参数
 };
 
 struct NavMeshTileHeader
@@ -354,7 +355,7 @@ dtNavMesh* Sample::loadAll(const char* path)
 	FILE* fp = fopen(path, "rb");
 	if (!fp) return 0;
 
-	// Read header.
+	// Read header. 读取导航网格文件头
 	NavMeshSetHeader header;
 	size_t readLen = fread(&header, sizeof(NavMeshSetHeader), 1, fp);
 	if (readLen != 1)
@@ -362,18 +363,18 @@ dtNavMesh* Sample::loadAll(const char* path)
 		fclose(fp);
 		return 0;
 	}
-	if (header.magic != NAVMESHSET_MAGIC)
+	if (header.magic != NAVMESHSET_MAGIC) // 验证魔数
 	{
 		fclose(fp);
 		return 0;
 	}
-	if (header.version != NAVMESHSET_VERSION)
+	if (header.version != NAVMESHSET_VERSION) // 验证版本
 	{
 		fclose(fp);
 		return 0;
 	}
 
-	dtNavMesh* mesh = dtAllocNavMesh();
+	dtNavMesh* mesh = dtAllocNavMesh(); // 创建导航网格对象
 	if (!mesh)
 	{
 		fclose(fp);

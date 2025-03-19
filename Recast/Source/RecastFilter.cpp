@@ -83,8 +83,8 @@ void rcFilterLedgeSpans(rcContext* context, const int walkableHeight, const int 
 					continue;
 				}
 
-				const int bot = (int)(span->smax);
-				const int top = span->next ? (int)(span->next->smin) : MAX_HEIGHT;
+				const int bot = (int)(span->smax); // 以当前 span 的 smax 为底部
+				const int top = span->next ? (int)(span->next->smin) : MAX_HEIGHT; // 以当前 span 的下一个 span 的 smin 为顶部，如果当前 span 是最后一个 span，则以 MAX_HEIGHT 为顶部
 
 				// Find neighbours minimum height.
 				int minNeighborHeight = MAX_HEIGHT;
@@ -93,6 +93,7 @@ void rcFilterLedgeSpans(rcContext* context, const int walkableHeight, const int 
 				int accessibleNeighborMinHeight = span->smax;
 				int accessibleNeighborMaxHeight = span->smax;
 
+				// 遍历当前 span 在上下左右四个方向的邻居 span, 计算出与邻居高度差中的最小值
 				for (int direction = 0; direction < 4; ++direction)
 				{
 					int dx = x + rcGetDirOffsetX(direction);
@@ -105,7 +106,7 @@ void rcFilterLedgeSpans(rcContext* context, const int walkableHeight, const int 
 					}
 
 					// From minus infinity to the first span.
-					const rcSpan* neighborSpan = heightfield.spans[dx + dy * xSize];
+					const rcSpan* neighborSpan = heightfield.spans[dx + dy * xSize]; // 获取当前 span 的邻居 span
 					int neighborBot = -walkableClimb;
 					int neighborTop = neighborSpan ? (int)neighborSpan->smin : MAX_HEIGHT;
 					
@@ -139,12 +140,14 @@ void rcFilterLedgeSpans(rcContext* context, const int walkableHeight, const int 
 
 				// The current span is close to a ledge if the drop to any
 				// neighbour span is less than the walkableClimb.
+				// 如果当前 span 与邻居 span 的最小高度差大于 walkableClimb，则将当前 span 设为不可走
 				if (minNeighborHeight < -walkableClimb)
 				{
 					span->area = RC_NULL_AREA;
 				}
 				// If the difference between all neighbours is too large,
 				// we are at steep slope, mark the span as ledge.
+				// 如果可访问邻居 span 的最大高度与最小高度差大于 walkableClimb，则将当前 span 设为不可走
 				else if ((accessibleNeighborMaxHeight - accessibleNeighborMinHeight) > walkableClimb)
 				{
 					span->area = RC_NULL_AREA;
